@@ -27,4 +27,5 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation files('libs/ocr-sdk.jar')
     implementation project(path: ':ocr_ui')
+    implementation files('libs/com.baidu.tts.jar')
 }
