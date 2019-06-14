@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.gdsgj.textrecognitionspeechsynthesis"
-        minSdkVersion 15
+        minSdkVersion 19
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -28,4 +28,6 @@ dependencies {
     implementation files('libs/ocr-sdk.jar')
     implementation project(path: ':ocr_ui')
     implementation files('libs/com.baidu.tts.jar')
+    implementation 'com.google.code.gson:gson:2.8.5'
+    implementation files('libs/aip-java-sdk-4.1.0.jar')
 }
