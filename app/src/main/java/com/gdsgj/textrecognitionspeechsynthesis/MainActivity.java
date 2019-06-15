@@ -3,13 +3,23 @@
  */
 package com.gdsgj.textrecognitionspeechsynthesis;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -18,6 +28,30 @@ import com.baidu.ocr.sdk.OnResultListener;
 import com.baidu.ocr.sdk.exception.OCRError;
 import com.baidu.ocr.sdk.model.AccessToken;
 import com.baidu.ocr.ui.camera.CameraActivity;
+import com.baidu.tts.auth.AuthInfo;
+import com.baidu.tts.client.SpeechError;
+import com.baidu.tts.client.SpeechSynthesizer;
+import com.baidu.tts.client.SpeechSynthesizerListener;
+import com.baidu.tts.client.TtsMode;
+import com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.NonBlockSyntherizer;
+import com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.util.OfflineResource;
+import com.gdsgj.textrecognitionspeechsynthesis.bean.GsonImpl;
+import com.gdsgj.textrecognitionspeechsynthesis.bean.LicensePlateBean;
+import com.gdsgj.textrecognitionspeechsynthesis.bean.UniversalTextRecognitionBean;
+
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import static com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.MainHandlerConstant.PRINT;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,17 +76,110 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_LOTTERY = 130;
     private static final int REQUEST_CODE_VATINVOICE = 131;
     private static final int REQUEST_CODE_CUSTOM = 132;
+    private static final int REQUEST_CODE_SMIILS = 133;
+    private static final int REQUEST_CODE_CAR_MODEL = 134;
+
+    private FileOutputStream ttsFileOutputStream;
+
+
+    // 声明一个数组，用来存储所有需要动态申请的权限。这里写的是同时申请多条权限，如果你只申请一条那么你就在数组里写一条权限好了
+    String[] permissions = new String[]{
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.CAMERA};
+    // 同时我们可以声明一个集合，用来存储用户拒绝授权的权限。
+    List<String> mPermissionList = new ArrayList<>();
 
 
     private boolean hasGotToken = false;
 
     private AlertDialog.Builder alertDialog;
+    private String TAG = "MainActivity";
 
+    // ================== 初始化参数设置开始 ==========================
+    /**
+     * 发布时请替换成自己申请的appId appKey 和 secretKey。注意如果需要离线合成功能,请在您申请的应用中填写包名。
+     * 本demo的包名是com.baidu.tts.sample，定义在build.gradle中。
+     */
+    protected String appId = "16374859";
+
+    protected String appKey = "5lRif6D73gebgh3ShLy0Cd49";
+
+    protected String secretKey = "btW35hoH1t0MqFIVpKU1lYKNa9RKswAT";
+
+    // TtsMode.MIX; 离在线融合，在线优先； TtsMode.ONLINE 纯在线； 没有纯离线
+    protected TtsMode ttsMode = TtsMode.ONLINE;
+
+    // 离线发音选择，VOICE_FEMALE即为离线女声发音。
+    // assets目录下bd_etts_common_speech_m15_mand_eng_high_am-mix_v3.0.0_20170505.dat为离线男声模型；
+    // assets目录下bd_etts_common_speech_f7_mand_eng_high_am-mix_v3.0.0_20170512.dat为离线女声模型
+    protected String offlineVoice = OfflineResource.VOICE_MALE;
+
+
+    // ================选择TtsMode.ONLINE  不需要设置以下参数; 选择TtsMode.MIX 需要设置下面2个离线资源文件的路径
+    private static final String TEMP_DIR = "/sdcard/baiduTTS"; // 重要！请手动将assets目录下的3个dat 文件复制到该目录
+
+    // 请确保该PATH下有这个文件
+    private static final String TEXT_FILENAME = TEMP_DIR + "/" + "bd_etts_text.dat";
+
+    // 请确保该PATH下有这个文件 ，m15是离线男声
+    private static final String MODEL_FILENAME =
+            TEMP_DIR + "/" + "bd_etts_common_speech_m15_mand_eng_high_am-mix_v3.0.0_20170505.dat";
+    private NonBlockSyntherizer synthesizer;
+    private Handler mainHandler;
+    private HandlerThread hThread;
+    private Handler tHandler;
+    private static final int INIT = 1;
+    private SpeechSynthesizer mSpeechSynthesizer;
+    private static final int RELEASE = 11;
+    private BufferedOutputStream ttsFileBufferedOutputStream;
+    private boolean isNeedSaveTTS = false;
+    private Application application;
+
+    // ===============初始化参数设置完毕，更多合成参数请至getParams()方法中设置 =================
+
+    /**
+     * android 6.0 以上需要动态申请权限
+     * //
+     */
+//    private void initPermission() {
+//        String permissions[] = {
+//                Manifest.permission.INTERNET,
+//                Manifest.permission.ACCESS_NETWORK_STATE,
+//                Manifest.permission.MODIFY_AUDIO_SETTINGS,
+//                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+//                Manifest.permission.WRITE_SETTINGS,
+//                Manifest.permission.READ_PHONE_STATE,
+//                Manifest.permission.ACCESS_WIFI_STATE,
+//                Manifest.permission.CHANGE_WIFI_STATE
+//        };
+//
+//        ArrayList<String> toApplyList = new ArrayList<String>();
+//
+//        for (String perm : permissions) {
+//            if (PackageManager.PERMISSION_GRANTED != ContextCompat.checkSelfPermission(this, perm)) {
+//                toApplyList.add(perm);
+//                //进入到这里代表没有权限.
+//            }
+//        }
+//        String tmpList[] = new String[toApplyList.size()];
+//        if (!toApplyList.isEmpty()) {
+//            ActivityCompat.requestPermissions(this, toApplyList.toArray(tmpList), 123);
+//        }
+//
+//    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         alertDialog = new AlertDialog.Builder(this);
+//        initPermission();
+        initialTts();
+        application = new Application();
+
 
         // 通用文字识别
         findViewById(R.id.general_basic_button).setOnClickListener(new View.OnClickListener() {
@@ -386,10 +513,45 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //笑脸识别
+        findViewById(R.id.smiley_face_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!checkTokenStatus()) {
+                    return;
+                }
+                Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+                intent.putExtra(CameraActivity.KEY_OUTPUT_FILE_PATH, FileUtil.getSaveFile(getApplication()).getAbsolutePath());
+                intent.putExtra(CameraActivity.KEY_CONTENT_TYPE,CameraActivity.CONTENT_TYPE_GENERAL);
+                startActivityForResult(intent,REQUEST_CODE_SMIILS);
+
+            }
+        });
+
+        //车型识别
+        findViewById(R.id.car_model_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+                intent.putExtra(CameraActivity.KEY_OUTPUT_FILE_PATH, FileUtil.getSaveFile(getApplication()).getAbsolutePath());
+                intent.putExtra(CameraActivity.KEY_CONTENT_TYPE,CameraActivity.CONTENT_TYPE_GENERAL);
+                startActivityForResult(intent, REQUEST_CODE_CAR_MODEL);
+            }
+        });
+
 
         // 请选择您的初始化方式
-         initAccessToken();
+        initAccessToken();
 //        initAccessTokenWithAkSk();
+    }
+
+
+    public void setParams(Map<String, String> params) {
+        if (params != null) {
+            for (Map.Entry<String, String> e : params.entrySet()) {
+                mSpeechSynthesizer.setParam(e.getKey(), e.getValue());
+            }
+        }
     }
 
     private boolean checkTokenStatus() {
@@ -398,6 +560,22 @@ public class MainActivity extends AppCompatActivity {
         }
         return hasGotToken;
     }
+
+    protected void sendToUiThread(String message) {
+        sendToUiThread(PRINT, message);
+    }
+
+    protected void sendToUiThread(int action, String message) {
+        Log.i(TAG, message);
+        if (mainHandler == null) { // 可以不依赖mainHandler
+            return;
+        }
+        Message msg = Message.obtain();
+        msg.what = action;
+        msg.obj = message + "\n";
+        mainHandler.sendMessage(msg);
+    }
+
 
     /**
      * 以license文件方式初始化
@@ -434,7 +612,7 @@ public class MainActivity extends AppCompatActivity {
                 error.printStackTrace();
                 alertText("AK，SK方式获取token失败", error.getMessage());
             }
-        }, getApplicationContext(),  "K6fAV836QwH9Ng0XGGwj6NEG", "PuqPiVHOhGhGeQgb4d0dXltrOncRS5vM");
+        }, getApplicationContext(), "K6fAV836QwH9Ng0XGGwj6NEG", "PuqPiVHOhGhGeQgb4d0dXltrOncRS5vM");
     }
 
     /**
@@ -463,7 +641,12 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 alertDialog.setTitle(title)
                         .setMessage(message)
-                        .setPositiveButton("确定", null)
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                mSpeechSynthesizer.stop();
+                            }
+                        })
                         .show();
             }
         });
@@ -473,12 +656,37 @@ public class MainActivity extends AppCompatActivity {
         alertText("", result);
     }
 
+    private void infoPopText(String title, final String result) {
+        alertText(title, result);
+    }
 
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        switch (requestCode) {
+            case 1:
+                for (int i = 0; i < grantResults.length; i++) {
+                    if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                        //判断是否勾选禁止后不再询问
+                        //如果应用之前请求过此权限但用户拒绝了请求，此方法将返回 true。
+                        boolean showRequestPermission = ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, permissions[i]);
+                        if (showRequestPermission) {
+                            //这里可以做相关操作，我这里是写的是重新申请权限
+                            checkPermission();//重新申请权限
+                            return;
+                        } else {
+                            //做相关操作。。。
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             initAccessToken();
         } else {
@@ -497,6 +705,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onResult(String result) {
                             infoPopText(result);
+
                         }
                     });
         }
@@ -518,7 +727,10 @@ public class MainActivity extends AppCompatActivity {
                     new RecognizeService.ServiceListener() {
                         @Override
                         public void onResult(String result) {
-                            infoPopText(result);
+
+                            Log.i(TAG, "onResult:  == " + getUniverstalTextJsonBean(result));
+                            infoPopText("识别结果,查看以下内容", getUniverstalTextJsonBean(result));
+                            speak(getUniverstalTextJsonBean(result));
                         }
                     });
         }
@@ -563,6 +775,8 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onResult(String result) {
                             infoPopText(result);
+                            Log.i(TAG, "onResult: 银行卡result" + result);
+                            speak(result);
                         }
                     });
         }
@@ -595,7 +809,8 @@ public class MainActivity extends AppCompatActivity {
                     new RecognizeService.ServiceListener() {
                         @Override
                         public void onResult(String result) {
-                            infoPopText(result);
+                            infoPopText("车牌识别结果", getLicensePlateJsonBean(result));
+                            speak(getLicensePlateJsonBean(result));
                         }
                     });
         }
@@ -603,34 +818,35 @@ public class MainActivity extends AppCompatActivity {
         // 识别成功回调，营业执照识别
         if (requestCode == REQUEST_CODE_BUSINESS_LICENSE && resultCode == Activity.RESULT_OK) {
             RecognizeService.recBusinessLicense(this, FileUtil.getSaveFile(getApplicationContext()).getAbsolutePath(),
-                new RecognizeService.ServiceListener() {
-                    @Override
-                    public void onResult(String result) {
-                        infoPopText(result);
-                    }
-                });
+                    new RecognizeService.ServiceListener() {
+                        @Override
+                        public void onResult(String result) {
+                            infoPopText(result);
+                        }
+                    });
         }
 
         // 识别成功回调，通用票据识别
         if (requestCode == REQUEST_CODE_RECEIPT && resultCode == Activity.RESULT_OK) {
             RecognizeService.recReceipt(this, FileUtil.getSaveFile(getApplicationContext()).getAbsolutePath(),
-                new RecognizeService.ServiceListener() {
-                    @Override
-                    public void onResult(String result) {
-                        infoPopText(result);
-                    }
-                });
+                    new RecognizeService.ServiceListener() {
+                        @Override
+                        public void onResult(String result) {
+                            infoPopText(result);
+                        }
+                    });
         }
+
 
         // 识别成功回调，护照
         if (requestCode == REQUEST_CODE_PASSPORT && resultCode == Activity.RESULT_OK) {
             RecognizeService.recPassport(this, FileUtil.getSaveFile(getApplicationContext()).getAbsolutePath(),
-                new RecognizeService.ServiceListener() {
-                    @Override
-                    public void onResult(String result) {
-                        infoPopText(result);
-                    }
-                });
+                    new RecognizeService.ServiceListener() {
+                        @Override
+                        public void onResult(String result) {
+                            infoPopText(result);
+                        }
+                    });
         }
 
         // 识别成功回调，二维码
@@ -717,4 +933,265 @@ public class MainActivity extends AppCompatActivity {
         // 释放内存资源
         OCR.getInstance(this).release();
     }
+
+
+    /**
+     * 初始化引擎，需要的参数均在InitConfig类里
+     * <p>
+     * DEMO中提供了3个SpeechSynthesizerListener的实现
+     * MessageListener 仅仅用log.i记录日志，在logcat中可以看见
+     * UiMessageListener 在MessageListener的基础上，对handler发送消息，实现UI的文字更新
+     * FileSaveListener 在UiMessageListener的基础上，使用 onSynthesizeDataArrived回调，获取音频流
+     */
+    protected void initialTts() {
+
+        // 1. 获取实例
+        mSpeechSynthesizer = SpeechSynthesizer.getInstance();
+        mSpeechSynthesizer.setContext(this);
+
+        // 2. 设置listener
+        mSpeechSynthesizer.setSpeechSynthesizerListener(speechSynthesizerListener);
+
+        // 3. 设置appId，appKey.secretKey
+        mSpeechSynthesizer.setAppId(appId);
+        mSpeechSynthesizer.setApiKey(appKey, secretKey);
+
+        // 4. 支持离线的话，需要设置离线模型
+        if (ttsMode.equals(TtsMode.MIX)) {
+            // 检查离线授权文件是否下载成功，离线授权文件联网时SDK自动下载管理，有效期3年，3年后的最后一个月自动更新。
+            if (!checkAuth()) {
+                return;
+            }
+            // 文本模型文件路径 (离线引擎使用)， 注意TEXT_FILENAME必须存在并且可读
+            mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_TTS_TEXT_MODEL_FILE, application.getTextModeFile());
+            // 声学模型文件路径 (离线引擎使用)， 注意TEXT_FILENAME必须存在并且可读
+            mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_TTS_SPEECH_MODEL_FILE, application.getSpeechModeFile());
+        }
+
+        // 5. 以下setParam 参数选填。不填写则默认值生效
+        // 设置在线发声音人： 0 普通女声（默认） 1 普通男声 2 特别男声 3 情感男声<度逍遥> 4 情感儿童声<度丫丫>
+        mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_SPEAKER, "0");
+        // 设置合成的音量，0-9 ，默认 5
+        mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_VOLUME, "9");
+        // 设置合成的语速，0-9 ，默认 5
+        mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_SPEED, "4");
+        // 设置合成的语调，0-9 ，默认 5
+        mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_PITCH, "4");
+        // 该参数设置为TtsMode.MIX生效。即纯在线模式不生效。
+        mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_MIX_MODE, SpeechSynthesizer.MIX_MODE_HIGH_SPEED_SYNTHESIZE_WIFI);
+        // MIX_MODE_DEFAULT 默认 ，wifi状态下使用在线，非wifi离线。在线状态下，请求超时6s自动转离线
+        // MIX_MODE_HIGH_SPEED_SYNTHESIZE_WIFI wifi状态下使用在线，非wifi离线。在线状态下， 请求超时1.2s自动转离线
+        // MIX_MODE_HIGH_SPEED_NETWORK ， 3G 4G wifi状态下使用在线，其它状态离线。在线状态下，请求超时1.2s自动转离线
+        // MIX_MODE_HIGH_SPEED_SYNTHESIZE, 2G 3G 4G wifi状态下使用在线，其它状态离线。在线状态下，请求超时1.2s自动转离线
+        // 设置播放器的音频流类型
+        mSpeechSynthesizer.setAudioStreamType(AudioManager.MODE_CURRENT);
+        // 不使用压缩传输
+        // mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_AUDIO_ENCODE, SpeechSynthesizer.AUDIO_ENCODE_PCM);
+        // mSpeechSynthesizer.setParam(SpeechSynthesizer.PARAM_AUDIO_RATE, SpeechSynthesizer.AUDIO_BITRATE_PCM);
+
+        // 6. 初始化
+        mSpeechSynthesizer.initTts(ttsMode);
+    }
+
+
+    /**
+     * 检查appId ak sk 是否填写正确，另外检查官网应用内设置的包名是否与运行时的包名一致。本demo的包名定义在build.gradle文件中
+     *
+     * @return
+     */
+    private boolean checkAuth() {
+        AuthInfo authInfo = mSpeechSynthesizer.auth(ttsMode);
+        if (!authInfo.isSuccess()) {
+            // 离线授权需要网站上的应用填写包名
+            String errorMsg = authInfo.getTtsError().getDetailMessage();
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+
+    /**
+     * speak 实际上是调用 synthesize后，获取音频流，然后播放。
+     * 需要合成的文本text的长度不能超过1024个GBK字节。
+     */
+    private void speak(String text) {
+        // 需要合成的文本text的长度不能超过1024个GBK字节。
+        // 合成前可以修改参数：
+        // Map<String, String> params = getParams();
+        // synthesizer.setParams(params);
+
+        int result = mSpeechSynthesizer.speak(text);
+        checkResult(result, "speak");
+    }
+
+    private void checkResult(int result, String method) {
+        if (result != 0) {
+            Log.i("MainActivity", "error code :" + result + " method:" + method + ", 错误码文档:http://yuyin.baidu.com/docs/tts/122 ");
+        }
+    }
+
+
+    private void checkPermission() {
+        mPermissionList.clear();
+        /**
+         *PackageManager.PERMISSION_GRANTED 表示有权限， PackageManager.PERMISSION_DENIED 表示无权限。
+         * 判断哪些权限未授予
+         * 以便必要的时候重新申请
+         */
+        for (String permission : permissions) {
+            //判断所要申请的权限是否已经授权
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                mPermissionList.add(permission);
+            }
+        }
+        /**
+         * 判断存储委授予权限的集合是否为空
+         */
+        if (!mPermissionList.isEmpty()) {
+            String[] permissions = mPermissionList.toArray(new String[mPermissionList.size()]);//将List转为数组
+            ActivityCompat.requestPermissions(MainActivity.this, permissions, 1);//请求指定授权
+        } else {//未授予的权限为空，表示都授予了
+        }
+    }
+
+
+    SpeechSynthesizerListener speechSynthesizerListener = new SpeechSynthesizerListener() {
+
+        private String destDir = application.getOutputDir().getPath();
+
+        @Override
+        public void onSynthesizeStart(String s) {
+            //合成开始
+            Log.i(TAG, "speechSynthesizerListener onSynthesizeStart");
+
+            if (isNeedSaveTTS) {
+                String filename = getTimeStampLocal() + ".pcm";
+                // 保存的语音文件是 16K采样率 16bits编码 单声道 pcm文件。
+                File ttsFile = new File(destDir, filename);
+                try {
+                    if (ttsFile.exists()) {
+                        ttsFile.delete();
+                    }
+                    ttsFile.createNewFile();
+                    FileOutputStream ttsFileOutputStream = new FileOutputStream(ttsFile);
+                    ttsFileBufferedOutputStream = new BufferedOutputStream(ttsFileOutputStream);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        @Override
+        public void onSynthesizeDataArrived(String s, byte[] data, int i) {
+            // 合成过程中的数据回调接口
+            Log.i(TAG, "speechSynthesizerListener onSynthesizeDataArrived s=" + s);
+
+            if (isNeedSaveTTS) {
+                try {
+                    ttsFileBufferedOutputStream.write(data);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        @Override
+        public void onSynthesizeFinish(String s) {
+            // 合成结束
+            Log.i(TAG, "speechSynthesizerListener onSynthesizeFinish s=" + s);
+
+            if (isNeedSaveTTS)
+                close();
+        }
+
+        @Override
+        public void onSpeechStart(String s) {
+            // 播放开始
+            Log.i(TAG, "speechSynthesizerListener onSpeechStart s=" + s);
+        }
+
+        @Override
+        public void onSpeechProgressChanged(String s, int i) {
+            // 播放过程中的回调
+            Log.i(TAG, "onSpeechProgressChanged onSpeechProgressChanged s=" + s);
+        }
+
+        @Override
+        public void onSpeechFinish(String s) {
+            // 播放结束
+            Log.i(TAG, "onSpeechProgressChanged onSpeechFinish s=" + s);
+        }
+
+        @Override
+        public void onError(String s, SpeechError speechError) {
+            // 合成和播放过程中出错时的回调
+            Log.e(TAG, "onSpeechProgressChanged onError s=" + s + " error=" + speechError.toString());
+            if (isNeedSaveTTS)
+                close();
+        }
+    };
+
+    private void close() {
+        if (ttsFileBufferedOutputStream != null) {
+            try {
+                ttsFileBufferedOutputStream.flush();
+                ttsFileBufferedOutputStream.close();
+                ttsFileBufferedOutputStream = null;
+            } catch (Exception e2) {
+                e2.printStackTrace();
+            }
+        }
+        if (ttsFileOutputStream != null) {
+            try {
+                ttsFileOutputStream.close();
+                ttsFileOutputStream = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+        }
+    }
+
+
+    public String getTimeStampLocal() {
+        Date d = new Date();
+        @SuppressLint("SimpleDateFormat")
+        DateFormat format = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+        return format.format(d);
+    }
+
+    /**
+     * 通用文字识别解析bean,返回结果list
+     *
+     * @param json 传入一个json
+     * @return
+     */
+    private String getUniverstalTextJsonBean(String json) {
+        StringBuilder words = new StringBuilder();
+        UniversalTextRecognitionBean beans = GsonImpl.get().toObject(json, UniversalTextRecognitionBean.class);
+        List<UniversalTextRecognitionBean.WordsResultBean> words_result = beans.getWords_result();
+        for (int i = 0; i < words_result.size(); i++) {
+            UniversalTextRecognitionBean.WordsResultBean wordsResultBean = words_result.get(i);
+            words.append(wordsResultBean.getWords()).append(",");
+
+        }
+        return words.toString();
+    }
+
+    /**
+     * 解析车牌号码json的方法
+     *
+     * @param json
+     * @return
+     */
+    private String getLicensePlateJsonBean(String json) {
+        LicensePlateBean licensePlateBean = GsonImpl.get().toObject(json, LicensePlateBean.class);
+        LicensePlateBean.WordsResultBean words_result = licensePlateBean.getWords_result();
+        return words_result.getNumber();
+    }
+
+
 }
+
