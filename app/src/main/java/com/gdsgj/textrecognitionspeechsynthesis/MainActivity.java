@@ -9,6 +9,8 @@ import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,10 +21,17 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.baidu.aip.face.AipFace;
+import com.baidu.aip.imageclassify.AipImageClassify;
 import com.baidu.ocr.sdk.OCR;
 import com.baidu.ocr.sdk.OnResultListener;
 import com.baidu.ocr.sdk.exception.OCRError;
@@ -40,14 +49,23 @@ import com.gdsgj.textrecognitionspeechsynthesis.bean.LicensePlateBean;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.UniversalTextRecognitionBean;
 
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -80,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_CAR_MODEL = 134;
 
     private FileOutputStream ttsFileOutputStream;
+    private String face_result=null,face_age=null,face_gender=null,face_race=null,face_beauty=null,face_expression=null;
 
 
     // 声明一个数组，用来存储所有需要动态申请的权限。这里写的是同时申请多条权限，如果你只申请一条那么你就在数组里写一条权限好了
@@ -138,39 +157,13 @@ public class MainActivity extends AppCompatActivity {
     private BufferedOutputStream ttsFileBufferedOutputStream;
     private boolean isNeedSaveTTS = false;
     private Application application;
+    private String absolutePath;
+    private TextView scan_value_tv;
+    private ImageView carmodeIv;
+    private TranslateAnimation ani;
 
     // ===============初始化参数设置完毕，更多合成参数请至getParams()方法中设置 =================
 
-    /**
-     * android 6.0 以上需要动态申请权限
-     * //
-     */
-//    private void initPermission() {
-//        String permissions[] = {
-//                Manifest.permission.INTERNET,
-//                Manifest.permission.ACCESS_NETWORK_STATE,
-//                Manifest.permission.MODIFY_AUDIO_SETTINGS,
-//                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-//                Manifest.permission.WRITE_SETTINGS,
-//                Manifest.permission.READ_PHONE_STATE,
-//                Manifest.permission.ACCESS_WIFI_STATE,
-//                Manifest.permission.CHANGE_WIFI_STATE
-//        };
-//
-//        ArrayList<String> toApplyList = new ArrayList<String>();
-//
-//        for (String perm : permissions) {
-//            if (PackageManager.PERMISSION_GRANTED != ContextCompat.checkSelfPermission(this, perm)) {
-//                toApplyList.add(perm);
-//                //进入到这里代表没有权限.
-//            }
-//        }
-//        String tmpList[] = new String[toApplyList.size()];
-//        if (!toApplyList.isEmpty()) {
-//            ActivityCompat.requestPermissions(this, toApplyList.toArray(tmpList), 123);
-//        }
-//
-//    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -179,6 +172,9 @@ public class MainActivity extends AppCompatActivity {
 //        initPermission();
         initialTts();
         application = new Application();
+        //扫描线
+        scan_value_tv = findViewById(R.id.scan_value_tv);
+        carmodeIv = (ImageView) findViewById(R.id.car_model_iv);
 
 
         // 通用文字识别
@@ -522,8 +518,8 @@ public class MainActivity extends AppCompatActivity {
                 }
                 Intent intent = new Intent(MainActivity.this, CameraActivity.class);
                 intent.putExtra(CameraActivity.KEY_OUTPUT_FILE_PATH, FileUtil.getSaveFile(getApplication()).getAbsolutePath());
-                intent.putExtra(CameraActivity.KEY_CONTENT_TYPE,CameraActivity.CONTENT_TYPE_GENERAL);
-                startActivityForResult(intent,REQUEST_CODE_SMIILS);
+                intent.putExtra(CameraActivity.KEY_CONTENT_TYPE, CameraActivity.CONTENT_TYPE_GENERAL);
+                startActivityForResult(intent, REQUEST_CODE_SMIILS);
 
             }
         });
@@ -534,7 +530,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, CameraActivity.class);
                 intent.putExtra(CameraActivity.KEY_OUTPUT_FILE_PATH, FileUtil.getSaveFile(getApplication()).getAbsolutePath());
-                intent.putExtra(CameraActivity.KEY_CONTENT_TYPE,CameraActivity.CONTENT_TYPE_GENERAL);
+                intent.putExtra(CameraActivity.KEY_CONTENT_TYPE, CameraActivity.CONTENT_TYPE_GENERAL);
                 startActivityForResult(intent, REQUEST_CODE_CAR_MODEL);
             }
         });
@@ -925,7 +921,248 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
         }
+
+//        if (requestCode == REQUEST_CODE_SMIILS && resultCode == Activity.RESULT_OK) {
+//            final String absolutePath = FileUtil.getSaveFile(getApplicationContext()).getAbsolutePath();
+//            FileInputStream fileInputStream = null;
+//            try {
+//                fileInputStream = new FileInputStream(absolutePath);
+//                final Bitmap bitmap = BitmapFactory.decodeStream(fileInputStream);
+//
+//                carmodeIv.setImageBitmap(bitmap);
+//                //提示扫描中
+//                scan_value_tv.setVisibility(View.VISIBLE);
+//
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        HashMap<String, String> options = new HashMap<>();
+//                        options.put("face_field", "age");
+//                        options.put("max_face_num", "2");
+//                        options.put("face_type", "LIVE");
+//                        options.put("liveness_control", "LOW");
+//
+//                        String imageType = "BASE64";
+//                        AipFace face = new AipFace("16532440", "Mrd5EfrmGhvGNmPKdXBGsa1c", "j9BfxXIf2t8NdGzohkXgg6GnmjL9rVnQ");
+//                        face.setConnectionTimeoutInMillis(2000);
+//                        face.setSocketTimeoutInMillis(6000);
+//
+////                        JSONObject vaule = face.detect(bitmapToBase64(bitmap), imageType,new HashMap<String, String>());
+////                        Message message = Message.obtain();
+////                        message.what = REQUEST_CODE_SMIILS;
+////                        message.obj = vaule;
+////                        handler.sendMessage(message);
+//                    }
+//                }).start();
+//
+//            } catch (FileNotFoundException e) {
+//                e.printStackTrace();
+//                Message message = Message.obtain();
+//                message.what = 0;//error 的值就发送0
+//                message.obj = e;
+//                handler.sendMessage(message);
+//            }
+//
+//        }
+
+
+        //识别车型回调
+        if (requestCode == REQUEST_CODE_CAR_MODEL && resultCode == Activity.RESULT_OK) {
+            final String absolutePath = FileUtil.getSaveFile(getApplicationContext()).getAbsolutePath();
+            try {
+                FileInputStream fileInputStream = new FileInputStream(absolutePath);
+                Bitmap bitmap = BitmapFactory.decodeStream(fileInputStream);
+                final byte[] bitmap2Bytes = bitmap2Bytes(bitmap);
+
+                carmodeIv.setImageBitmap(bitmap);
+
+                //提示扫描中
+                scan_value_tv.setVisibility(View.VISIBLE);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        AipImageClassify classify = new AipImageClassify(appId, appKey, secretKey);
+                        classify.setConnectionTimeoutInMillis(2000);
+                        classify.setSocketTimeoutInMillis(6000);
+                        JSONObject vaule = classify.carDetect(bitmap2Bytes, new HashMap<String, String>());
+                        Message message = Message.obtain();
+                        message.what = REQUEST_CODE_CAR_MODEL;
+                        message.obj = vaule;
+                        handler.sendMessage(message);
+                    }
+                }).start();
+
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
+
+
+    @SuppressLint("HandlerLeak")
+    Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+
+            switch (msg.what) {
+                case REQUEST_CODE_CAR_MODEL:
+                    JSONObject carObject = (JSONObject) msg.obj;
+                    JSONArray carJsonArray = null;
+                    try {
+                        carJsonArray = new JSONArray(carObject.optString("result"));
+                        String name4 = carJsonArray.optJSONObject(0).optString("name");
+                        String score4 = carJsonArray.optJSONObject(0).optString("score");
+                        String[] mitems4 = {"名称：" + name4, "可能性：" + score4};
+                        Log.i(TAG, "handleMessage: mitems4 car ==" + "名称：" + name4 + "可能性：" + score4);
+                        scan_value_tv.setVisibility(View.GONE);
+                        AlertDialog.Builder alertDialog4 = new AlertDialog.Builder(MainActivity.this);
+                        alertDialog4.setTitle("识别报告").setItems(mitems4, null).create().show();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+               /* case REQUEST_CODE_SMIILS:
+                    JSONObject smailsObject = (JSONObject) msg.obj;
+                    face_result=smailsObject.optString("result_num");
+                    Log.i(TAG, "handleMessage: faceresult ==" + face_result);
+                    int i = Integer.parseInt(face_result);
+                    if(*//*Integer.parseInt(face_result.toString())*//*i>=1) {
+                        try {
+                            JSONArray js = new JSONArray(smailsObject.optString("result"));
+                            face_age = js.optJSONObject(0).optString("age");
+                            face_gender = js.optJSONObject(0).optString("gender");
+                            if (face_gender.equals("female")) {
+                                face_gender = "女";
+                            } else {
+                                face_gender = "男";
+                            }
+                            face_race = js.optJSONObject(0).optString("race");
+                            if (face_race.equals("yellow")) {
+                                face_race = "黄种人";
+                            } else if (face_race.equals("white")) {
+                                face_race = "白种人";
+                            } else if (face_race.equals("black")) {
+                                face_race = "黑种人";
+                            }else if(face_race.equals("arabs")){
+                                face_race = "阿拉伯人";
+                            }
+                            int express = Integer.parseInt(js.optJSONObject(0).optString("expression"));
+                            if (express == 0) {
+                                face_expression = "无";
+                            } else if (express == 1) {
+                                face_expression = "微笑";
+                            } else {
+                                face_expression = "大笑";
+                            }
+                            face_beauty = js.optJSONObject(0).optString("beauty");
+                            double  beauty=Math.ceil(Double.parseDouble(face_beauty)+25);
+                            if(beauty>=100){
+                                beauty=99.0;
+                            }
+                            else if(beauty<70){
+                                beauty+=10;
+                            }
+                            else if(beauty>80 && beauty<90){
+                                beauty+=5;
+                            }
+                            else if(beauty>=90 && beauty<95){
+                                beauty+=2;
+                            }
+                            face_beauty=String.valueOf(beauty);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        AlertDialog.Builder alertDialog5 = new AlertDialog.Builder(MainActivity.this);
+                        String[] mItems5 = {"性别：" + face_gender, "年龄：" + face_age, "肤色：" + face_race, "颜值：" + face_beauty, "笑容：" + face_expression};
+                        alertDialog5.setTitle("人脸识别报告").setItems(mItems5, null).create().show();
+                        scan_value_tv.setVisibility(View.GONE);
+                    }else{
+                        AlertDialog.Builder alertDialog5 = new AlertDialog.Builder(MainActivity.this);
+                        alertDialog5.setTitle("人脸识别报告").setMessage("图片不够清晰，请重新选择").create().show();
+                    }
+                    break;*/
+
+                default:
+                    break;
+            }
+
+
+        }
+    };
+
+
+    /**
+     * bitmap转base64
+     *
+     * @param @param  bitmap
+     * @param @return 设定文件
+     * @return String    返回类型
+     * @throws
+     * @Title: bitmapToBase64
+     * @Description: TODO(Bitmap 转换为字符串)
+     */
+    @SuppressLint("NewApi")
+    public static String bitmapToBase64(Bitmap bitmap) {
+
+        // 要返回的字符串
+        String reslut = null;
+
+        ByteArrayOutputStream baos = null;
+
+        try {
+
+            if (bitmap != null) {
+
+                baos = new ByteArrayOutputStream();
+                /**
+                 * 压缩只对保存有效果bitmap还是原来的大小
+                 */
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 30, baos);
+
+                baos.flush();
+                baos.close();
+                // 转换为字节数组
+                byte[] byteArray = baos.toByteArray();
+
+                // 转换为字符串
+                reslut = Base64.encodeToString(byteArray, Base64.DEFAULT);
+            } else {
+                return null;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+
+            try {
+                if (baos != null) {
+                    baos.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+        return reslut;
+
+    }
+
+
+
+    /**
+     * 把Bitmap转Byte
+     *
+     * @Author HEH
+     * @EditTime 2010-07-19 上午11:45:56
+     */
+    public byte[] bitmap2Bytes(Bitmap bm) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bm.compress(Bitmap.CompressFormat.PNG, 100, baos);
+        return baos.toByteArray();
+    }
+
 
     @Override
     protected void onDestroy() {

@@ -30,4 +30,9 @@ dependencies {
     implementation files('libs/com.baidu.tts.jar')
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation files('libs/aip-java-sdk-4.1.0.jar')
+    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+//    implementation files('libs/aip-java-sdk-4.11.1.jar')
+    implementation files('libs/json-20160810.jar')
+    implementation files('libs/slf4j-api-1.7.25.jar')
+    implementation files('libs/slf4j-simple-1.7.25.jar')
 }

@@ -2,10 +2,11 @@
   ~ Copyright (C) 2017 Baidu, Inc. All Rights Reserved.
   -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     style="@style/result_pop_scroll"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:fadingEdge="vertical"
     android:scrollbars="vertical">
 
@@ -124,7 +125,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical">
 
             <Button
@@ -205,6 +206,37 @@
                 android:layout_height="wrap_content"
                 android:text="车型识别"
                 tools:ignore="HardcodedText" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <ImageView
+                    android:id="@+id/car_model_iv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scaleType="centerCrop" />
+
+                <TextView
+                    android:id="@+id/scan_value_tv"
+                    android:layout_below="@id/car_model_iv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="结果扫描中"
+                    android:gravity="center"
+                    android:textColor="@color/colorWhite"
+                    android:textStyle="bold"
+                    android:textSize="20sp"
+                    android:visibility="gone"
+                    android:background="@color/colorAccent" />
+
+
+            </RelativeLayout>
+
+            <TextView
+                android:id="@+id/re_result_tv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
 
         </LinearLayout>
 
