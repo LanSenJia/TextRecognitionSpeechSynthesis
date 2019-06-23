@@ -766,7 +766,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onResult(String result) {
                             infoPopText(result);
                             Log.i(TAG, "onResult: 银行卡result" + result);
-                            speak(result);
+                            speak(result + "   ");
                         }
                     });
         }
