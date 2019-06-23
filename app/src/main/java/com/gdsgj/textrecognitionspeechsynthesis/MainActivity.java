@@ -70,6 +70,8 @@ import java.util.List;
 import java.util.Map;
 
 import static com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.MainHandlerConstant.PRINT;
+import static com.gdsgj.textrecognitionspeechsynthesis.Const.appId;
+import static com.gdsgj.textrecognitionspeechsynthesis.Const.secretKey;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -119,15 +121,7 @@ public class MainActivity extends AppCompatActivity {
     private String TAG = "MainActivity";
 
     // ================== 初始化参数设置开始 ==========================
-    /**
-     * 发布时请替换成自己申请的appId appKey 和 secretKey。注意如果需要离线合成功能,请在您申请的应用中填写包名。
-     * 本demo的包名是com.baidu.tts.sample，定义在build.gradle中。
-     */
-    protected String appId = "16374859";
 
-    protected String appKey = "5lRif6D73gebgh3ShLy0Cd49";
-
-    protected String secretKey = "btW35hoH1t0MqFIVpKU1lYKNa9RKswAT";
 
     // TtsMode.MIX; 离在线融合，在线优先； TtsMode.ONLINE 纯在线； 没有纯离线
     protected TtsMode ttsMode = TtsMode.ONLINE;
@@ -981,7 +975,7 @@ public class MainActivity extends AppCompatActivity {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        AipImageClassify classify = new AipImageClassify(appId, appKey, secretKey);
+                        AipImageClassify classify = new AipImageClassify(appId, Const.appKey, secretKey);
                         classify.setConnectionTimeoutInMillis(2000);
                         classify.setSocketTimeoutInMillis(6000);
                         JSONObject vaule = classify.carDetect(bitmap2Bytes, new HashMap<String, String>());
@@ -1191,7 +1185,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 3. 设置appId，appKey.secretKey
         mSpeechSynthesizer.setAppId(appId);
-        mSpeechSynthesizer.setApiKey(appKey, secretKey);
+        mSpeechSynthesizer.setApiKey(Const.appKey, secretKey);
 
         // 4. 支持离线的话，需要设置离线模型
         if (ttsMode.equals(TtsMode.MIX)) {

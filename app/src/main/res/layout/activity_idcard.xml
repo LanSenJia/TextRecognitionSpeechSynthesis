@@ -42,11 +42,13 @@
         android:text="身份证正面(本地质量控制)"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:visibility="gone"
         android:id="@+id/id_card_front_button_native"
         tools:ignore="HardcodedText"/>
 
     <Button
             android:text="身份证反面"
+        android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/id_card_back_button"
@@ -54,6 +56,7 @@
 
     <Button
         android:text="身份证反面(本地质量控制)"
+        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/id_card_back_button_native"
