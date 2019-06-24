@@ -26,10 +26,12 @@ import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.TranslateAnimation;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.baidu.aip.asrwakeup3.core.mini.AutoCheck;
 import com.baidu.aip.face.AipFace;
 import com.baidu.aip.imageclassify.AipImageClassify;
 import com.baidu.ocr.sdk.OCR;
@@ -37,6 +39,10 @@ import com.baidu.ocr.sdk.OnResultListener;
 import com.baidu.ocr.sdk.exception.OCRError;
 import com.baidu.ocr.sdk.model.AccessToken;
 import com.baidu.ocr.ui.camera.CameraActivity;
+import com.baidu.speech.EventListener;
+import com.baidu.speech.EventManager;
+import com.baidu.speech.EventManagerFactory;
+import com.baidu.speech.asr.SpeechConstant;
 import com.baidu.tts.auth.AuthInfo;
 import com.baidu.tts.client.SpeechError;
 import com.baidu.tts.client.SpeechSynthesizer;
@@ -66,6 +72,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -73,7 +80,14 @@ import static com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.MainHandlerConst
 import static com.gdsgj.textrecognitionspeechsynthesis.Const.appId;
 import static com.gdsgj.textrecognitionspeechsynthesis.Const.secretKey;
 
-public class MainActivity extends AppCompatActivity {
+/*
+ * @author  LanSenJia
+ * @date 2019/6/24.
+ * description： 这是文字识别语音识别等主入口
+ * version: 1.0
+ */
+
+public class MainActivity extends AppCompatActivity implements EventListener {
 
     private static final int REQUEST_CODE_GENERAL = 105;
     private static final int REQUEST_CODE_GENERAL_BASIC = 106;
@@ -100,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_CAR_MODEL = 134;
 
     private FileOutputStream ttsFileOutputStream;
-    private String face_result=null,face_age=null,face_gender=null,face_race=null,face_beauty=null,face_expression=null;
+    private String face_result = null, face_age = null, face_gender = null, face_race = null, face_beauty = null, face_expression = null;
 
 
     // 声明一个数组，用来存储所有需要动态申请的权限。这里写的是同时申请多条权限，如果你只申请一条那么你就在数组里写一条权限好了
@@ -155,6 +169,10 @@ public class MainActivity extends AppCompatActivity {
     private TextView scan_value_tv;
     private ImageView carmodeIv;
     private TranslateAnimation ani;
+    private Button startBtn;
+    private Button stopBtn;
+    protected boolean enableOffline = false; // 测试离线命令词，需要改成true
+    private EventManager asr;
 
     // ===============初始化参数设置完毕，更多合成参数请至getParams()方法中设置 =================
 
@@ -164,12 +182,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         alertDialog = new AlertDialog.Builder(this);
 //        initPermission();
+        //初始化语音合成
         initialTts();
-        application = new Application();
-        //扫描线
-        scan_value_tv = findViewById(R.id.scan_value_tv);
-        carmodeIv = (ImageView) findViewById(R.id.car_model_iv);
 
+        application = new Application();
+        //扫描
+        scan_value_tv = findViewById(R.id.scan_value_tv);
+        //用来显示汽车图片的空间
+        carmodeIv = (ImageView) findViewById(R.id.car_model_iv);
+        //初始化语音识别
+        initSpeechRecognition();
 
         // 通用文字识别
         findViewById(R.id.general_basic_button).setOnClickListener(new View.OnClickListener() {
@@ -1144,7 +1166,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
     /**
      * 把Bitmap转Byte
      *
@@ -1163,6 +1184,13 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         // 释放内存资源
         OCR.getInstance(this).release();
+
+        // 基于SDK集成4.2 发送取消事件
+        asr.send(SpeechConstant.ASR_CANCEL, "{}", null, 0, 0);
+
+        // 基于SDK集成5.2 退出事件管理器
+        // 必须与registerListener成对出现，否则可能造成内存泄露
+        asr.unregisterListener(this);
     }
 
 
@@ -1256,13 +1284,14 @@ public class MainActivity extends AppCompatActivity {
         checkResult(result, "speak");
     }
 
+    //假设语音合成错误，返回的结果
     private void checkResult(int result, String method) {
         if (result != 0) {
             Log.i("MainActivity", "error code :" + result + " method:" + method + ", 错误码文档:http://yuyin.baidu.com/docs/tts/122 ");
         }
     }
 
-
+    //检查权限
     private void checkPermission() {
         mPermissionList.clear();
         /**
@@ -1286,7 +1315,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
+    //设置合成语音的listener
     SpeechSynthesizerListener speechSynthesizerListener = new SpeechSynthesizerListener() {
 
         private String destDir = application.getOutputDir().getPath();
@@ -1421,6 +1450,118 @@ public class MainActivity extends AppCompatActivity {
         LicensePlateBean licensePlateBean = GsonImpl.get().toObject(json, LicensePlateBean.class);
         LicensePlateBean.WordsResultBean words_result = licensePlateBean.getWords_result();
         return words_result.getNumber();
+    }
+
+    /**
+     * 初始化语音识别引擎
+     */
+    private void initSpeechRecognition() {
+        //语音识别1.1: 初始化EventManagerFactory
+        asr = EventManagerFactory.create(this, "asr");
+        //语音识别1.3 EventManager 对象注册监听事件
+        asr.registerListener(this);
+
+        startBtn = findViewById(R.id.speechrecognition_button_start);
+        stopBtn = findViewById(R.id.speechrecognition_button_stop);
+        //语音识别开始按钮
+        startBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                start();
+            }
+        });
+        //语音识别结束按钮
+        stopBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stop();
+            }
+        });
+
+    }
+
+    // 语音识别 1.2: MainActivity 继承 EventListener，注意该 EventListener 包名是: com.baidu.speech;
+    // 基于SDK集成3.1 开始回调事件
+    @Override
+    public void onEvent(String name, String params, byte[] data, int offset, int length) {
+        String logTxt = "name: " + name;
+
+
+        if (params != null && !params.isEmpty()) {
+            logTxt += " ;params :" + params;
+        }
+        if (name.equals(SpeechConstant.CALLBACK_EVENT_ASR_PARTIAL)) {
+            if (params != null && params.contains("\"nlu_result\"")) {
+                if (length > 0 && data.length > 0) {
+                    logTxt += ", 语义解析结果：" + new String(data, offset, length);
+                }
+            }
+        } else if (data != null) {
+            logTxt += " ;data length=" + data.length;
+        }
+        Log.i(TAG, "onEvent: " + logTxt);
+
+    }
+
+    /**
+     * 基于SDK集成2.2 发送开始事件
+     * 点击开始按钮
+     * 测试参数填在这里
+     */
+    private void start() {
+        scan_value_tv.setVisibility(View.VISIBLE);
+        scan_value_tv.setText("");
+        Map<String, Object> params = new LinkedHashMap<String, Object>();
+        String event = null;
+        event = SpeechConstant.ASR_START; // 替换成测试的event
+
+        // 测试离线命令词，需要改成true
+        if (enableOffline) {
+            params.put(SpeechConstant.DECODER, 2);
+        }
+        // 基于SDK集成2.1 设置识别参数
+        params.put(SpeechConstant.ACCEPT_AUDIO_VOLUME, false);
+        // params.put(SpeechConstant.NLU, "enable");
+        // params.put(SpeechConstant.VAD_ENDPOINT_TIMEOUT, 0); // 长语音
+        // params.put(SpeechConstant.IN_FILE, "res:///com/baidu/android/voicedemo/16k_test.pcm");
+        // params.put(SpeechConstant.VAD, SpeechConstant.VAD_DNN);
+        // params.put(SpeechConstant.PID, 1537); // 中文输入法模型，有逗号
+
+        /* 语音自训练平台特有参数 */
+        // params.put(SpeechConstant.PID, 8002);
+        // 语音自训练平台特殊pid，8002：搜索模型类似开放平台 1537  具体是8001还是8002，看自训练平台页面上的显示
+        // params.put(SpeechConstant.LMID,1068); // 语音自训练平台已上线的模型ID，https://ai.baidu.com/smartasr/model
+        // 注意模型ID必须在你的appId所在的百度账号下
+        /* 语音自训练平台特有参数 */
+
+        // 请先使用如‘在线识别’界面测试和生成识别参数。 params同ActivityRecog类中myRecognizer.start(params);
+        // 复制此段可以自动检测错误
+        (new AutoCheck(getApplicationContext(), new Handler() {
+            public void handleMessage(Message msg) {
+                if (msg.what == 100) {
+                    AutoCheck autoCheck = (AutoCheck) msg.obj;
+                    synchronized (autoCheck) {
+                        String message = autoCheck.obtainErrorMessage(); // autoCheck.obtainAllMessage();
+                        scan_value_tv.append(message + "\n");
+                        ; // 可以用下面一行替代，在logcat中查看代码
+                        // Log.w("AutoCheckMessage", message);
+                    }
+                }
+            }
+        }, enableOffline)).checkAsr(params);
+        String json = null; // 可以替换成自己的json
+        json = new JSONObject(params).toString(); // 这里可以替换成你需要测试的json
+        asr.send(event, json, null, 0, 0);
+        Log.i(TAG, "输入参数：" + json);
+    }
+
+    /**
+     * 点击停止按钮
+     * 基于SDK集成4.1 发送停止事件
+     */
+    private void stop() {
+        scan_value_tv.setText("停止识别：ASR_STOP");
+        asr.send(SpeechConstant.ASR_STOP, null, null, 0, 0); //
     }
 
 

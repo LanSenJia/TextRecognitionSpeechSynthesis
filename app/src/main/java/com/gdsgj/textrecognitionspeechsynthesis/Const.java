@@ -1,8 +1,5 @@
 package com.gdsgj.textrecognitionspeechsynthesis;
 
-/**
- * Created by huangyouyang on 2018/6/8.
- */
 
 public class Const {
 

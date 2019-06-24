@@ -18,8 +18,6 @@ import java.util.Map;
 
 /**
  * 该类是对SpeechSynthesizer的封装
- * <p>
- * Created by fujiayi on 2017/5/24.
  */
 
 public class MySyntherizer implements MainHandlerConstant {

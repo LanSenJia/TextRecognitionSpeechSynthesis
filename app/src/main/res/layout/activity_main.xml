@@ -199,6 +199,19 @@
                 android:layout_height="wrap_content"
                 android:text="笑脸识别"
                 tools:ignore="HardcodedText" />
+            <Button
+            android:id="@+id/speechrecognition_button_start"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="语音识别开始"
+            tools:ignore="HardcodedText" />
+
+            <Button
+                android:id="@+id/speechrecognition_button_stop"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="语音识别停止"
+                tools:ignore="HardcodedText" />
 
             <Button
                 android:id="@+id/car_model_button"

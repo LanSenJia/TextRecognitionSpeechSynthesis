@@ -6,7 +6,6 @@ import android.util.Log;
 
 /**
  * 在 MessageListener的基础上，和UI配合。
- * Created by fujiayi on 2017/9/14.
  */
 
 public class UiMessageListener extends MessageListener {

@@ -49,7 +49,13 @@ import java.util.Date;
 import java.util.List;
 
 import static com.gdsgj.textrecognitionspeechsynthesis.Const.appId;
-
+/*
+ * @author  LanSenJia
+ * @date 2019/6/24.
+ * description：这是识别银行卡的类
+ * version: 1.0
+ *
+ */
 public class IDCardActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_PICK_IMAGE_FRONT = 201;

@@ -13,7 +13,6 @@ import java.io.IOException;
 /**
  * 保存回调音频流到文件。您也可以直接处理音频流
  * FileSaveListener 在UiMessageListener的基础上，使用 onSynthesizeDataArrived回调，获取音频流
- * Created by fujiayi on 2017/9/15.
  */
 
 public class FileSaveListener extends UiMessageListener {

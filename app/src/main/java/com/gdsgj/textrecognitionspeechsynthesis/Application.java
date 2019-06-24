@@ -9,10 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 
-/**
- * Created by huangyouyang on 2018/6/8.
- */
-
 public class Application extends android.app.Application {
 
     static File baseDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), Const.MY_BASE_DIR);

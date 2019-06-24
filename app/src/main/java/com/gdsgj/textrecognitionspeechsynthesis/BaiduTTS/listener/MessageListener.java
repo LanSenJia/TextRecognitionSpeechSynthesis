@@ -8,7 +8,6 @@ import com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.MainHandlerConstant;
 
 /**
  * SpeechSynthesizerListener 简单地实现，仅仅记录日志
- * Created by fujiayi on 2017/5/19.
  */
 
 public class MessageListener implements SpeechSynthesizerListener, MainHandlerConstant {

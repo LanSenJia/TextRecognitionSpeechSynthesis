@@ -16,6 +16,10 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    packagingOptions{
+        doNotStrip "*/*/libvad.dnn.so"
+        doNotStrip "*/*/libbd_easr_s1_merge_normal_20151216.dat.so"
+    }
 }
 
 dependencies {
@@ -35,4 +39,5 @@ dependencies {
     implementation files('libs/json-20160810.jar')
     implementation files('libs/slf4j-api-1.7.25.jar')
     implementation files('libs/slf4j-simple-1.7.25.jar')
+    implementation project(path: ':core')
 }
