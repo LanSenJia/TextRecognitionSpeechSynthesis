@@ -739,7 +739,6 @@ public class MainActivity extends AppCompatActivity implements EventListener {
                     new RecognizeService.ServiceListener() {
                         @Override
                         public void onResult(String result) {
-
                             Log.i(TAG, "onResult:  == " + getUniverstalTextJsonBean(result));
                             infoPopText("识别结果,查看以下内容", getUniverstalTextJsonBean(result));
                             speak(getUniverstalTextJsonBean(result));
