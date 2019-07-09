@@ -7,6 +7,7 @@
     style="@style/result_pop_scroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#57D1C9"
     android:fadingEdge="vertical"
     android:scrollbars="vertical">
 
