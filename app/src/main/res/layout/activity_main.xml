@@ -8,7 +8,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fadingEdge="vertical"
-        android:background="#57D1C9"
     android:scrollbars="vertical">
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -200,12 +199,20 @@
                 android:layout_height="wrap_content"
                 android:text="笑脸识别"
                 tools:ignore="HardcodedText" />
+
             <Button
-            android:id="@+id/speechrecognition_button_start"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="语音识别开始"
-            tools:ignore="HardcodedText" />
+                android:id="@+id/car_model_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="车型识别"
+                tools:ignore="HardcodedText" />
+
+            <Button
+                android:id="@+id/speechrecognition_button_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="语音识别开始"
+                tools:ignore="HardcodedText" />
 
             <Button
                 android:id="@+id/speechrecognition_button_stop"
@@ -214,12 +221,6 @@
                 android:text="语音识别停止"
                 tools:ignore="HardcodedText" />
 
-            <Button
-                android:id="@+id/car_model_button"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="车型识别"
-                tools:ignore="HardcodedText" />
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -233,16 +234,16 @@
 
                 <TextView
                     android:id="@+id/scan_value_tv"
-                    android:layout_below="@id/car_model_iv"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="结果扫描中"
+                    android:layout_below="@id/car_model_iv"
+                    android:background="@color/colorAccent"
                     android:gravity="center"
+                    android:text="结果扫描中"
                     android:textColor="@color/colorWhite"
-                    android:textStyle="bold"
                     android:textSize="20sp"
-                    android:visibility="gone"
-                    android:background="@color/colorAccent" />
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
 
             </RelativeLayout>
