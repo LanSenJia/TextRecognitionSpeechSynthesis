@@ -52,6 +52,7 @@ import com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.NonBlockSyntherizer;
 import com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.util.OfflineResource;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.GsonImpl;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.LicensePlateBean;
+import com.gdsgj.textrecognitionspeechsynthesis.bean.SpeechBean;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.UniversalTextRecognitionBean;
 
 
@@ -120,6 +121,7 @@ public class MainActivity extends AppCompatActivity implements EventListener {
     // 声明一个数组，用来存储所有需要动态申请的权限。这里写的是同时申请多条权限，如果你只申请一条那么你就在数组里写一条权限好了
     String[] permissions = new String[]{
             Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.RECORD_AUDIO,
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -1483,23 +1485,28 @@ public class MainActivity extends AppCompatActivity implements EventListener {
     // 基于SDK集成3.1 开始回调事件
     @Override
     public void onEvent(String name, String params, byte[] data, int offset, int length) {
-        String logTxt = "name: " + name;
-
+//        String logTxt = "name: " + name;
+        String logTxt = "";
+        StringBuilder builder = new StringBuilder();
 
         if (params != null && !params.isEmpty()) {
-            logTxt += " ;params :" + params;
+//            logTxt += " ;params :" + params;
+            SpeechBean speechBeans = GsonImpl.get().toObject(params, SpeechBean.class);
+            String best_result = speechBeans.getBest_result();
+            builder.append(best_result);
         }
         if (name.equals(SpeechConstant.CALLBACK_EVENT_ASR_PARTIAL)) {
             if (params != null && params.contains("\"nlu_result\"")) {
                 if (length > 0 && data.length > 0) {
                     logTxt += ", 语义解析结果：" + new String(data, offset, length);
+                    Log.i(TAG, "onEvent: 语义解析结果"  + logTxt);
                 }
             }
         } else if (data != null) {
-            logTxt += " ;data length=" + data.length;
+//            logTxt += " ;data length=" + data.length;
         }
-        Log.i(TAG, "onEvent: " + logTxt);
-
+        Log.i(TAG, "onEvent: " + builder.toString() );
+        scan_value_tv.setText(builder.toString());
     }
 
     /**
@@ -1523,7 +1530,7 @@ public class MainActivity extends AppCompatActivity implements EventListener {
         // params.put(SpeechConstant.NLU, "enable");
         // params.put(SpeechConstant.VAD_ENDPOINT_TIMEOUT, 0); // 长语音
         // params.put(SpeechConstant.IN_FILE, "res:///com/baidu/android/voicedemo/16k_test.pcm");
-        // params.put(SpeechConstant.VAD, SpeechConstant.VAD_DNN);
+         params.put(SpeechConstant.VAD, SpeechConstant.VAD_DNN);
         // params.put(SpeechConstant.PID, 1537); // 中文输入法模型，有逗号
 
         /* 语音自训练平台特有参数 */
@@ -1541,9 +1548,9 @@ public class MainActivity extends AppCompatActivity implements EventListener {
                     AutoCheck autoCheck = (AutoCheck) msg.obj;
                     synchronized (autoCheck) {
                         String message = autoCheck.obtainErrorMessage(); // autoCheck.obtainAllMessage();
-                        scan_value_tv.append(message + "\n");
+//                        scan_value_tv.append(message + "\n");
                         ; // 可以用下面一行替代，在logcat中查看代码
-                        // Log.w("AutoCheckMessage", message);
+                        Log.w("AutoCheckMessage", message);
                     }
                 }
             }
