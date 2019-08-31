@@ -6,7 +6,6 @@ import java.util.List;
  * @Title:
  * @Copyright:  GuangZhou F.R.O Electronic Technology Co.,Ltd. Copyright 2006-2016,  All rights reserved
  * @Descrplacetion:  ${TODO}<请描述此文件是做什么的>
- * @author:  lansenboy
  * @data: 2019/7/16
  * @version:  V1.0
  * @OfficialWebsite: http://www.frotech.com/

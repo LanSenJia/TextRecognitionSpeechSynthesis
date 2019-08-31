@@ -11,7 +11,6 @@ import java.util.List;
  * @Title:
  * @Copyright:  GuangZhou F.R.O Electronic Technology Co.,Ltd. Copyright 2006-2016,  All rights reserved
  * @Descrplacetion:  ${TODO}<用来解析返回json数据的类>
- * @author:  lansenboy
  * @data: 2019/6/9
  * @version:  V1.0
  * @OfficialWebsite: http://www.frotech.com/

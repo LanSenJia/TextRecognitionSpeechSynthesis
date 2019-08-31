@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Created by fujiayi on 2017/11/27.
  * <p>
  * 解决大文件的输入问题。
  * 文件大时不能通过Infile参数一下子输入。

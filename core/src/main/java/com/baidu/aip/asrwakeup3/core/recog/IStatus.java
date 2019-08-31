@@ -1,9 +1,5 @@
 package com.baidu.aip.asrwakeup3.core.recog;
 
-/**
- * Created by fujiayi on 2017/6/14.
- */
-
 public interface IStatus {
 
     int STATUS_NONE = 2;

@@ -21,10 +21,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
 
-/**
- * Created by fujiayi on 2017/8/15.
- */
-
 public class ActivityMiniWakeUp extends AppCompatActivity implements EventListener {
     protected TextView txtLog;
     protected TextView txtResult;

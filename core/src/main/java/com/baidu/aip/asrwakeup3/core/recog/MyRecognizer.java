@@ -13,7 +13,6 @@ import com.baidu.aip.asrwakeup3.core.recog.listener.RecogEventAdapter;
 import java.util.Map;
 
 /**
- * Created by fujiayi on 2017/6/13.
  * EventManager内的方法如send 都可以在主线程中进行，SDK中做过处理
  */
 
@@ -71,7 +70,7 @@ public class MyRecognizer {
      */
     public void loadOfflineEngine(Map<String, Object> params) {
         String json = new JSONObject(params).toString();
-        MyLogger.info(TAG + ".Debug", "离线命令词初始化参数（反馈请带上此行日志）:" + json);
+        MyLogger.info(TAG + ".Debug", "离线命令词初始化参数:" + json);
         // SDK集成步骤（可选）加载离线命令词(离线时使用)
         asr.send(SpeechConstant.ASR_KWS_LOAD_ENGINE, json, null, 0, 0);
         isOfflineEngineLoaded = true;
@@ -87,7 +86,7 @@ public class MyRecognizer {
         }
         // SDK集成步骤 拼接识别参数
         String json = new JSONObject(params).toString();
-        MyLogger.info(TAG + ".Debug", "识别参数（反馈请带上此行日志）" + json);
+        MyLogger.info(TAG + ".Debug", "识别参数" + json);
         asr.send(SpeechConstant.ASR_START, json, null, 0, 0);
     }
 

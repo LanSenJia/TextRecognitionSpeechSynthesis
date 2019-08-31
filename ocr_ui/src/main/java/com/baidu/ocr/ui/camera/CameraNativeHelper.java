@@ -7,10 +7,6 @@ import android.content.Context;
 
 import com.baidu.idcardquality.IDcardQualityProcess;
 
-/**
- * Created by ruanshimin on 2018/1/23.
- */
-
 public class CameraNativeHelper {
 
     public interface CameraNativeInitCallback {

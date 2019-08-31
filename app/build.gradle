@@ -40,4 +40,6 @@ dependencies {
     implementation files('libs/slf4j-api-1.7.25.jar')
     implementation files('libs/slf4j-simple-1.7.25.jar')
     implementation project(path: ':core')
+    implementation project(path: ':uiasr')
+    compile project(path: ':uidialog')
 }

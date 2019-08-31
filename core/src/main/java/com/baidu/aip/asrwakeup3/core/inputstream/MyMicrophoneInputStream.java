@@ -9,10 +9,6 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- * Created by fujiayi on 2017/11/27.
- */
-
 public class MyMicrophoneInputStream extends InputStream {
     private static AudioRecord audioRecord;
 

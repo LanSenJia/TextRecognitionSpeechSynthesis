@@ -1,7 +1,6 @@
 package com.gdsgj.textrecognitionspeechsynthesis.bean;
 
 /*
- * @author LanSenJia
  * @date 2019/6/22.
  * description：
  * version: 1.0

@@ -32,6 +32,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.baidu.aip.asrwakeup3.core.mini.AutoCheck;
+import com.baidu.aip.asrwakeup3.core.recog.MyRecognizer;
+import com.baidu.aip.asrwakeup3.core.recog.RecogResult;
+import com.baidu.aip.asrwakeup3.core.recog.listener.ChainRecogListener;
+import com.baidu.aip.asrwakeup3.core.recog.listener.IRecogListener;
+import com.baidu.aip.asrwakeup3.core.recog.listener.MessageStatusRecogListener;
+import com.baidu.aip.asrwakeup3.core.recog.listener.RecogEventAdapter;
+import com.baidu.aip.asrwakeup3.core.util.MyLogger;
+import com.baidu.aip.asrwakeup3.uiasr.params.OfflineRecogParams;
 import com.baidu.aip.face.AipFace;
 import com.baidu.aip.imageclassify.AipImageClassify;
 import com.baidu.ocr.sdk.OCR;
@@ -54,6 +62,8 @@ import com.gdsgj.textrecognitionspeechsynthesis.bean.GsonImpl;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.LicensePlateBean;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.SpeechBean;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.UniversalTextRecognitionBean;
+import com.gdsgj.textrecognitionspeechsynthesis.recog.ActivityAbstractRecog;
+import com.gdsgj.textrecognitionspeechsynthesis.recog.ActivityOfflineRecog;
 
 
 import org.json.JSONArray;
@@ -82,13 +92,12 @@ import static com.gdsgj.textrecognitionspeechsynthesis.Const.appId;
 import static com.gdsgj.textrecognitionspeechsynthesis.Const.secretKey;
 
 /*
- * @author  LanSenJia
  * @date 2019/6/24.
  * description： 这是文字识别语音识别等主入口
  * version: 1.0
  */
 
-public class MainActivity extends AppCompatActivity implements EventListener {
+public class MainActivity extends AppCompatActivity  {
 
     private static final int REQUEST_CODE_GENERAL = 105;
     private static final int REQUEST_CODE_GENERAL_BASIC = 106;
@@ -175,6 +184,8 @@ public class MainActivity extends AppCompatActivity implements EventListener {
     private Button stopBtn;
     protected boolean enableOffline = false; // 测试离线命令词，需要改成true
     private EventManager asr;
+    private IRecogListener listener;
+    private MyRecognizer myRecognizer;
 
     // ===============初始化参数设置完毕，更多合成参数请至getParams()方法中设置 =================
 
@@ -194,6 +205,7 @@ public class MainActivity extends AppCompatActivity implements EventListener {
         carmodeIv = (ImageView) findViewById(R.id.car_model_iv);
         //初始化语音识别
         initSpeechRecognition();
+
 
         // 通用文字识别
         findViewById(R.id.general_basic_button).setOnClickListener(new View.OnClickListener() {
@@ -1186,14 +1198,7 @@ public class MainActivity extends AppCompatActivity implements EventListener {
         // 释放内存资源
         OCR.getInstance(this).release();
 
-        // 基于SDK集成4.2 发送取消事件
-        asr.send(SpeechConstant.ASR_CANCEL, "{}", null, 0, 0);
-
-        // 基于SDK集成5.2 退出事件管理器
-        // 必须与registerListener成对出现，否则可能造成内存泄露
-        asr.unregisterListener(this);
     }
-
 
     /**
      * 初始化引擎，需要的参数均在InitConfig类里
@@ -1457,117 +1462,17 @@ public class MainActivity extends AppCompatActivity implements EventListener {
      * 初始化语音识别引擎
      */
     private void initSpeechRecognition() {
-        //语音识别1.1: 初始化EventManagerFactory
-        asr = EventManagerFactory.create(this, "asr");
-        //语音识别1.3 EventManager 对象注册监听事件
-        asr.registerListener(this);
-
         startBtn = findViewById(R.id.speechrecognition_button_start);
         stopBtn = findViewById(R.id.speechrecognition_button_stop);
         //语音识别开始按钮
         startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                start();
-            }
-        });
-        //语音识别结束按钮
-        stopBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stop();
+                Intent intent = new Intent(MainActivity.this, ActivityOfflineRecog.class);
+                startActivity(intent);
             }
         });
 
-    }
-
-    // 语音识别 1.2: MainActivity 继承 EventListener，注意该 EventListener 包名是: com.baidu.speech;
-    // 基于SDK集成3.1 开始回调事件
-    @Override
-    public void onEvent(String name, String params, byte[] data, int offset, int length) {
-//        String logTxt = "name: " + name;
-        String logTxt = "";
-        StringBuilder builder = new StringBuilder();
-
-        if (params != null && !params.isEmpty()) {
-//            logTxt += " ;params :" + params;
-            SpeechBean speechBeans = GsonImpl.get().toObject(params, SpeechBean.class);
-            String best_result = speechBeans.getBest_result();
-            builder.append(best_result);
-        }
-        if (name.equals(SpeechConstant.CALLBACK_EVENT_ASR_PARTIAL)) {
-            if (params != null && params.contains("\"nlu_result\"")) {
-                if (length > 0 && data.length > 0) {
-                    logTxt += ", 语义解析结果：" + new String(data, offset, length);
-                    Log.i(TAG, "onEvent: 语义解析结果"  + logTxt);
-                }
-            }
-        } else if (data != null) {
-//            logTxt += " ;data length=" + data.length;
-        }
-        Log.i(TAG, "onEvent: " + builder.toString() );
-        scan_value_tv.setText(builder.toString());
-    }
-
-    /**
-     * 基于SDK集成2.2 发送开始事件
-     * 点击开始按钮
-     * 测试参数填在这里
-     */
-    private void start() {
-        scan_value_tv.setVisibility(View.VISIBLE);
-        scan_value_tv.setText("");
-        Map<String, Object> params = new LinkedHashMap<String, Object>();
-        String event = null;
-        event = SpeechConstant.ASR_START; // 替换成测试的event
-
-        // 测试离线命令词，需要改成true
-        if (enableOffline) {
-            params.put(SpeechConstant.DECODER, 2);
-        }
-        // 基于SDK集成2.1 设置识别参数
-        params.put(SpeechConstant.ACCEPT_AUDIO_VOLUME, false);
-        // params.put(SpeechConstant.NLU, "enable");
-        // params.put(SpeechConstant.VAD_ENDPOINT_TIMEOUT, 0); // 长语音
-        // params.put(SpeechConstant.IN_FILE, "res:///com/baidu/android/voicedemo/16k_test.pcm");
-         params.put(SpeechConstant.VAD, SpeechConstant.VAD_DNN);
-        // params.put(SpeechConstant.PID, 1537); // 中文输入法模型，有逗号
-
-        /* 语音自训练平台特有参数 */
-        // params.put(SpeechConstant.PID, 8002);
-        // 语音自训练平台特殊pid，8002：搜索模型类似开放平台 1537  具体是8001还是8002，看自训练平台页面上的显示
-        // params.put(SpeechConstant.LMID,1068); // 语音自训练平台已上线的模型ID，https://ai.baidu.com/smartasr/model
-        // 注意模型ID必须在你的appId所在的百度账号下
-        /* 语音自训练平台特有参数 */
-
-        // 请先使用如‘在线识别’界面测试和生成识别参数。 params同ActivityRecog类中myRecognizer.start(params);
-        // 复制此段可以自动检测错误
-        (new AutoCheck(getApplicationContext(), new Handler() {
-            public void handleMessage(Message msg) {
-                if (msg.what == 100) {
-                    AutoCheck autoCheck = (AutoCheck) msg.obj;
-                    synchronized (autoCheck) {
-                        String message = autoCheck.obtainErrorMessage(); // autoCheck.obtainAllMessage();
-//                        scan_value_tv.append(message + "\n");
-                        ; // 可以用下面一行替代，在logcat中查看代码
-                        Log.w("AutoCheckMessage", message);
-                    }
-                }
-            }
-        }, enableOffline)).checkAsr(params);
-        String json = null; // 可以替换成自己的json
-        json = new JSONObject(params).toString(); // 这里可以替换成你需要测试的json
-        asr.send(event, json, null, 0, 0);
-        Log.i(TAG, "输入参数：" + json);
-    }
-
-    /**
-     * 点击停止按钮
-     * 基于SDK集成4.1 发送停止事件
-     */
-    private void stop() {
-        scan_value_tv.setText("停止识别：ASR_STOP");
-        asr.send(SpeechConstant.ASR_STOP, null, null, 0, 0); //
     }
 
 

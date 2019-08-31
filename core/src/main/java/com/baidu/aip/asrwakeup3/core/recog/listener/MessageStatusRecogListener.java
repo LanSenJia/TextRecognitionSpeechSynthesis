@@ -6,9 +6,6 @@ import android.util.Log;
 import com.baidu.aip.asrwakeup3.core.recog.RecogResult;
 import com.baidu.speech.asr.SpeechConstant;
 
-/**
- * Created by fujiayi on 2017/6/16.
- */
 
 public class MessageStatusRecogListener extends StatusRecogListener {
     private Handler handler;

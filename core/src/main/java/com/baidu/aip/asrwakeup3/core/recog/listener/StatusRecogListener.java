@@ -1,9 +1,5 @@
 package com.baidu.aip.asrwakeup3.core.recog.listener;
 
-/**
- * Created by fujiayi on 2017/6/14.
- */
-
 import android.util.Log;
 import com.baidu.aip.asrwakeup3.core.recog.IStatus;
 import com.baidu.aip.asrwakeup3.core.recog.RecogResult;

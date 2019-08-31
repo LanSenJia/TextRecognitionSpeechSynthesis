@@ -27,9 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeSet;
 
-/**
- * Created by fujiayi on 2017/12/28.
- */
 
 /**
  * 自动排查工具，用于集成后发现错误。

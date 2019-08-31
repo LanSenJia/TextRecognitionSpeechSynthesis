@@ -4,9 +4,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/**
- * Created by fujiayi on 2017/6/24.
- */
 public class RecogResult {
     private static final int ERROR_NONE = 0;
 

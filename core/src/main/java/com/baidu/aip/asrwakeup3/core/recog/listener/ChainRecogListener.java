@@ -5,10 +5,6 @@ import com.baidu.aip.asrwakeup3.core.recog.RecogResult;
 
 import java.util.ArrayList;
 
-/**
- * Created by fujiayi on 2017/10/18.
- */
-
 public class ChainRecogListener implements IRecogListener {
 
     private ArrayList<IRecogListener> listeners;

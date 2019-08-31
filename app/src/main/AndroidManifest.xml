@@ -37,6 +37,14 @@
             </intent-filter>
         </activity>
         <activity android:name=".IDCardActivity" />
+        <activity android:name=".RecoActivity" />
+        <activity android:name=".recog.ActivityAbstractRecog" />
+        <activity android:name=".recog.ActivityAllRecog" />
+        <activity android:name=".recog.ActivityOfflineRecog" />
+        <activity android:name=".recog.ActivityNlu" />
+        <activity android:name=".recog.ActivityOnlineRecog" />
+        <activity android:name=".recog.ActivityUiDialog" />
+        <activity android:name=".ActivityAllRecog" />
     </application>
 
 </manifest>

@@ -7,9 +7,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- * Created by fujiayi on 2017/6/20.
- */
 
 public class InFileStream {
 
