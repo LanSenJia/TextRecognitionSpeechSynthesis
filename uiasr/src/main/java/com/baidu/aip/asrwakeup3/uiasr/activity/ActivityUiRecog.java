@@ -5,7 +5,9 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Message;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.View;
+
 import com.baidu.aip.asrwakeup3.core.recog.IStatus;
 import com.baidu.aip.asrwakeup3.uiasr.params.AllRecogParams;
 import com.baidu.aip.asrwakeup3.uiasr.params.CommonRecogParams;
@@ -170,10 +172,25 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
         switch (msg.what) { // 处理MessageStatusRecogListener中的状态回调
             case STATUS_FINISHED:
                 if (msg.arg2 == 1) {
-                    txtResult.setText(msg.obj.toString());
+//                    txtResult.setText(msg.obj.toString());
+                    txtLog.setVisibility(View.GONE);
+                    String subStr = msg.obj.toString().substring(9);
+                    subStr = subStr.substring(0, msg.obj.toString().indexOf("；"));
+                    subStr = subStr.substring(0, subStr.length() - 10);
+                    txtResult.setText(subStr);
+                    Log.i(TAG, "handleMsg: msg识别结果" + subStr);
+                    
+                    String whatis = "这是什么";
+                    if (whatis.contains(subStr)){
+
+                    }
+                    
                 }
                 status = msg.what;
                 updateBtnTextByStatus();
+
+               
+
                 break;
             case STATUS_NONE:
             case STATUS_READY:

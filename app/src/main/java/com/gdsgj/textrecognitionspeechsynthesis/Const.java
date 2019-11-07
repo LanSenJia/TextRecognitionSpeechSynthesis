@@ -12,10 +12,10 @@ public class Const {
      * 发布时请替换成自己申请的appId appKey 和 secretKey。注意如果需要离线合成功能,请在您申请的应用中填写包名。
      * 本demo的包名是com.baidu.tts.sample，定义在build.gradle中。
      */
-    protected static String appId = "16374859";
+    protected static String appId = "17721709";
 
-    protected static String appKey = "5lRif6D73gebgh3ShLy0Cd49";
+    protected static String appKey = "4gjVTa9Q6Mjkzya9hEc6OYEQ";
 
-    protected static String secretKey = "btW35hoH1t0MqFIVpKU1lYKNa9RKswAT";
+    protected static String secretKey = "8o5VRVhosQOoRpTL5GKTCdhmxDWijIL7 ";
 
 }
