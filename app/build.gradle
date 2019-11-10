@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.gdsgj.textrecognitionspeechsynthesis"
-        minSdkVersion 19
+        minSdkVersion  21
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -41,5 +41,5 @@ dependencies {
     implementation files('libs/slf4j-simple-1.7.25.jar')
     implementation project(path: ':core')
     implementation project(path: ':uiasr')
-    compile project(path: ':uidialog')
+    implementation project(path: ':uidialog')
 }
