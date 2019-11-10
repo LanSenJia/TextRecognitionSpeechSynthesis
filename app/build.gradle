@@ -9,6 +9,13 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+    }
+
+    repositories {
+        flatDir { dirs " libs" }
     }
     buildTypes {
         release {
@@ -16,10 +23,18 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    packagingOptions{
+    packagingOptions {
         doNotStrip "*/*/libvad.dnn.so"
         doNotStrip "*/*/libbd_easr_s1_merge_normal_20151216.dat.so"
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    aaptOptions {
+        noCompress "tflite"
+    }
+
 }
 
 dependencies {
@@ -41,5 +56,13 @@ dependencies {
     implementation files('libs/slf4j-simple-1.7.25.jar')
     implementation project(path: ':core')
     implementation project(path: ':uiasr')
-    compile project(path: ':uidialog')
+    implementation project(path: ':uidialog')
+    implementation 'com.hanuor.onyx:onyx:1.1.4'
+    implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'com.google.android.material:material:1.0.0'
+    implementation 'androidx.coordinatorlayout:coordinatorlayout:1.0.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:0.0.0-nightly'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.0.0-nightly'
+
 }

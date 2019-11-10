@@ -20,6 +20,10 @@ android {
         doNotStrip "*/*/libvad.dnn.so"
         doNotStrip "*/*/libbd_easr_s1_merge_normal_20151216.dat.so"
     }
+    compileOptions {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+    }
 }
 
 

@@ -64,6 +64,8 @@ import com.gdsgj.textrecognitionspeechsynthesis.bean.SpeechBean;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.UniversalTextRecognitionBean;
 import com.gdsgj.textrecognitionspeechsynthesis.recog.ActivityAbstractRecog;
 import com.gdsgj.textrecognitionspeechsynthesis.recog.ActivityOfflineRecog;
+import com.hanuor.onyx.Onyx;
+import com.hanuor.onyx.hub.OnTaskCompletion;
 
 
 import org.json.JSONArray;
@@ -87,6 +89,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static android.provider.ContactsContract.CommonDataKinds.Website.URL;
 import static com.gdsgj.textrecognitionspeechsynthesis.BaiduTTS.MainHandlerConstant.PRINT;
 import static com.gdsgj.textrecognitionspeechsynthesis.Const.appId;
 import static com.gdsgj.textrecognitionspeechsynthesis.Const.secretKey;
@@ -97,7 +100,7 @@ import static com.gdsgj.textrecognitionspeechsynthesis.Const.secretKey;
  * version: 1.0
  */
 
-public class MainActivity extends AppCompatActivity  {
+public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_GENERAL = 105;
     private static final int REQUEST_CODE_GENERAL_BASIC = 106;
@@ -186,6 +189,7 @@ public class MainActivity extends AppCompatActivity  {
     private EventManager asr;
     private IRecogListener listener;
     private MyRecognizer myRecognizer;
+    private TextView resultTv;
 
     // ===============初始化参数设置完毕，更多合成参数请至getParams()方法中设置 =================
 
@@ -205,6 +209,7 @@ public class MainActivity extends AppCompatActivity  {
         carmodeIv = (ImageView) findViewById(R.id.car_model_iv);
         //初始化语音识别
         initSpeechRecognition();
+        resultTv = (TextView) findViewById(R.id.re_result_tv);
 
 
         // 通用文字识别
@@ -1472,6 +1477,7 @@ public class MainActivity extends AppCompatActivity  {
                 startActivity(intent);
             }
         });
+
 
     }
 
