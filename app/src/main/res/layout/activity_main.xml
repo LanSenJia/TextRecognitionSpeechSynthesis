@@ -220,6 +220,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="语音识别停止"
+                android:visibility="gone"
                 tools:ignore="HardcodedText" />
 
 

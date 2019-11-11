@@ -64,8 +64,7 @@ import com.gdsgj.textrecognitionspeechsynthesis.bean.SpeechBean;
 import com.gdsgj.textrecognitionspeechsynthesis.bean.UniversalTextRecognitionBean;
 import com.gdsgj.textrecognitionspeechsynthesis.recog.ActivityAbstractRecog;
 import com.gdsgj.textrecognitionspeechsynthesis.recog.ActivityOfflineRecog;
-import com.hanuor.onyx.Onyx;
-import com.hanuor.onyx.hub.OnTaskCompletion;
+
 
 
 import org.json.JSONArray;
