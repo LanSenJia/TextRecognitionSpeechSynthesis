@@ -199,6 +199,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="笑脸识别"
+                android:visibility="gone"
                 tools:ignore="HardcodedText" />
 
             <Button
@@ -241,7 +242,7 @@
                     android:layout_below="@id/car_model_iv"
                     android:background="@color/colorAccent"
                     android:gravity="center"
-                    android:text="结果扫描中"
+                    android:text="图片识别中,请耐心等候"
                     android:textColor="@color/colorWhite"
                     android:textSize="20sp"
                     android:textStyle="bold"

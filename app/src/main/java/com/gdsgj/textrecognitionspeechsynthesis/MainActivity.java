@@ -66,7 +66,6 @@ import com.gdsgj.textrecognitionspeechsynthesis.recog.ActivityAbstractRecog;
 import com.gdsgj.textrecognitionspeechsynthesis.recog.ActivityOfflineRecog;
 
 
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -571,8 +570,8 @@ public class MainActivity extends AppCompatActivity {
 
 
         // 请选择您的初始化方式
-        initAccessToken();
-//        initAccessTokenWithAkSk();
+//        initAccessToken();
+        initAccessTokenWithAkSk();
     }
 
 
@@ -616,7 +615,7 @@ public class MainActivity extends AppCompatActivity {
             public void onResult(AccessToken accessToken) {
                 Const.TOKEN = accessToken.getAccessToken();
                 hasGotToken = true;
-                Log.i(TAG, "onResult: licence方式获取token成功 token 是：  "+   Const.TOKEN);
+                Log.i(TAG, "onResult: licence方式获取token成功 token 是：  " + Const.TOKEN);
             }
 
             @Override
@@ -719,7 +718,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            initAccessToken();
+//            initAccessToken();
+            initAccessTokenWithAkSk();
         } else {
             Toast.makeText(getApplicationContext(), "需要android.permission.READ_PHONE_STATE", Toast.LENGTH_LONG).show();
         }
@@ -760,7 +760,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onResult(String result) {
                             Log.i(TAG, "onResult:  == " + getUniverstalTextJsonBean(result));
                             infoPopText("识别结果,查看以下内容", getUniverstalTextJsonBean(result));
-                            speak(getUniverstalTextJsonBean(result));
+                            speak("文字识别结果是：" + getUniverstalTextJsonBean(result));
                         }
                     });
         }
@@ -806,7 +806,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onResult(String result) {
                             infoPopText(result);
                             Log.i(TAG, "onResult: 银行卡result" + result);
-                            speak(result + "   ");
+                            speak("银行卡识别结果是：" + result + "   ");
                         }
                     });
         }
@@ -840,7 +840,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onResult(String result) {
                             infoPopText("车牌识别结果", getLicensePlateJsonBean(result));
-                            speak(getLicensePlateJsonBean(result));
+                            speak("银行卡识别结果是：" + getLicensePlateJsonBean(result));
                         }
                     });
         }
@@ -1049,11 +1049,15 @@ public class MainActivity extends AppCompatActivity {
                         carJsonArray = new JSONArray(carObject.optString("result"));
                         String name4 = carJsonArray.optJSONObject(0).optString("name");
                         String score4 = carJsonArray.optJSONObject(0).optString("score");
-                        String[] mitems4 = {"名称：" + name4, "可能性：" + score4};
+
+                        String[] mitems4 = {"该车型是：" + name4, "可能性：" + score4};
                         Log.i(TAG, "handleMessage: mitems4 car ==" + "名称：" + name4 + "可能性：" + score4);
                         scan_value_tv.setVisibility(View.GONE);
                         AlertDialog.Builder alertDialog4 = new AlertDialog.Builder(MainActivity.this);
                         alertDialog4.setTitle("识别报告").setItems(mitems4, null).create().show();
+
+                        speak("识别报告：该车型是 " + name4);
+
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -1223,7 +1227,7 @@ public class MainActivity extends AppCompatActivity {
         mSpeechSynthesizer.setSpeechSynthesizerListener(speechSynthesizerListener);
 
         // 3. 设置appId，appKey.secretKey
-        mSpeechSynthesizer.setAppId( Const.appId);
+        mSpeechSynthesizer.setAppId(Const.appId);
         mSpeechSynthesizer.setApiKey(Const.appKey, Const.secretKey);
 
         // 4. 支持离线的话，需要设置离线模型
@@ -1274,7 +1278,7 @@ public class MainActivity extends AppCompatActivity {
         if (!authInfo.isSuccess()) {
             // 离线授权需要网站上的应用填写包名
             String errorMsg = authInfo.getTtsError().getDetailMessage();
-            Log.e(TAG, "checkAuth: errorMSG"+ errorMsg );
+            Log.e(TAG, "checkAuth: errorMSG" + errorMsg);
             return false;
         } else {
             return true;
