@@ -614,8 +614,9 @@ public class MainActivity extends AppCompatActivity {
         OCR.getInstance(this).initAccessToken(new OnResultListener<AccessToken>() {
             @Override
             public void onResult(AccessToken accessToken) {
-                String token = accessToken.getAccessToken();
+                Const.TOKEN = accessToken.getAccessToken();
                 hasGotToken = true;
+                Log.i(TAG, "onResult: licence方式获取token成功 token 是：  "+   Const.TOKEN);
             }
 
             @Override
@@ -642,7 +643,7 @@ public class MainActivity extends AppCompatActivity {
                 error.printStackTrace();
                 alertText("AK，SK方式获取token失败", error.getMessage());
             }
-        }, getApplicationContext(), "K6fAV836QwH9Ng0XGGwj6NEG", "PuqPiVHOhGhGeQgb4d0dXltrOncRS5vM");
+        }, getApplicationContext(), Const.appKey, secretKey);
     }
 
     /**
@@ -1222,8 +1223,8 @@ public class MainActivity extends AppCompatActivity {
         mSpeechSynthesizer.setSpeechSynthesizerListener(speechSynthesizerListener);
 
         // 3. 设置appId，appKey.secretKey
-        mSpeechSynthesizer.setAppId(appId);
-        mSpeechSynthesizer.setApiKey(Const.appKey, secretKey);
+        mSpeechSynthesizer.setAppId( Const.appId);
+        mSpeechSynthesizer.setApiKey(Const.appKey, Const.secretKey);
 
         // 4. 支持离线的话，需要设置离线模型
         if (ttsMode.equals(TtsMode.MIX)) {
@@ -1273,6 +1274,7 @@ public class MainActivity extends AppCompatActivity {
         if (!authInfo.isSuccess()) {
             // 离线授权需要网站上的应用填写包名
             String errorMsg = authInfo.getTtsError().getDetailMessage();
+            Log.e(TAG, "checkAuth: errorMSG"+ errorMsg );
             return false;
         } else {
             return true;

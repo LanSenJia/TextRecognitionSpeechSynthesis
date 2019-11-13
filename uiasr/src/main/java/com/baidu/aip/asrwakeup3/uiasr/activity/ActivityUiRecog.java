@@ -1,31 +1,31 @@
 package com.baidu.aip.asrwakeup3.uiasr.activity;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
-import android.support.v4.content.FileProvider;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.baidu.aip.asrwakeup3.core.recog.IStatus;
-import com.baidu.aip.asrwakeup3.uiasr.AuthService;
 import com.baidu.aip.asrwakeup3.uiasr.Base64Util;
+import com.baidu.aip.asrwakeup3.uiasr.FaceBeanClass;
 import com.baidu.aip.asrwakeup3.uiasr.FileUtil;
-import com.baidu.aip.asrwakeup3.uiasr.HttpUtil;
 import com.baidu.aip.asrwakeup3.uiasr.PhotoUtils;
 import com.baidu.aip.asrwakeup3.uiasr.R;
 import com.baidu.aip.asrwakeup3.uiasr.params.AllRecogParams;
@@ -37,7 +37,6 @@ import com.baidu.aip.asrwakeup3.uiasr.setting.AllSetting;
 import com.baidu.aip.asrwakeup3.uiasr.setting.NluSetting;
 import com.baidu.aip.asrwakeup3.uiasr.setting.OfflineSetting;
 import com.baidu.aip.asrwakeup3.uiasr.setting.OnlineSetting;
-import com.bumptech.glide.Glide;
 import com.google.gson.Gson;
 
 import org.json.JSONArray;
@@ -50,6 +49,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -91,10 +91,24 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
 
     private final Class settingActivityClass;
 
-    private final int IMAGE_RESULT_CODE = 2;
     private final int PICK = 1;
-    private String url = "https://aip.baidubce.com/rest/2.0/image-classify/v2/advanced_general";//
+    private final int IMAGE_RESULT_CODE = 2;
+    private final int FACE = 3;
+    private String imageclassifyUrl = "https://aip.baidubce.com/rest/2.0/image-classify/v2/advanced_general";//
+    private String faceUrl = "https://aip.baidubce.com/rest/2.0/face/v3/detect";
     private Handler mHandler = new Handler(Looper.getMainLooper());
+
+    // 声明一个数组，用来存储所有需要动态申请的权限。这里写的是同时申请多条权限，如果你只申请一条那么你就在数组里写一条权限好了
+    String[] permissions = new String[]{
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.CAMERA};
+    // 同时我们可以声明一个集合，用来存储用户拒绝授权的权限。
+    List<String> mPermissionList = new ArrayList<>();
 
     /**
      * 控制UI按钮的状态
@@ -105,13 +119,12 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
      * 日志使用
      */
     private static final String TAG = "ActivityUiRecog";
-    private String imgString;
     private ImageView recogIv;
     private String imgParam;
     private Uri imageUri;
     private File outputImage;
-    private Bitmap bitmap;
     private TextView resultTv;
+    private String filePath;
 
 
     /**
@@ -235,13 +248,19 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
                         String subStr = msg.obj.toString().substring(9);
                         subStr = subStr.substring(0, msg.obj.toString().indexOf("；"));
                         subStr = subStr.substring(0, subStr.length() - 10);
-                        txtResult.setText(subStr);
+                        txtResult.setText("语音识别结果： "+subStr);
                         Log.i(TAG, "handleMsg: msg识别结果" + subStr);
                         String whatis = "这是什么";
+                        String faceis = "颜值打分";
+                        String faceis2 = "人脸打分";
                         String whatis_keyword = "这个是什么";
                         if (whatis.contains(subStr) || whatis_keyword.contains(subStr)) {
                             Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
                             startActivityForResult(intent, PICK);
+
+                        } else if (faceis.equals(subStr)|| faceis2.contains(subStr)) {
+                            Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+                            startActivityForResult(intent, FACE);
                         }
                     }
                 }
@@ -297,7 +316,7 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
             case PICK:
                 if (resultCode == RESULT_OK) {
                     Bundle bundle = data.getExtras();
-                    bitmap = (Bitmap) bundle.get("data");
+                    Bitmap bitmap = (Bitmap) bundle.get("data");
 
                     recogIv.setImageBitmap(bitmap);
 
@@ -306,10 +325,9 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
                     } else {
                         imageUri = Uri.parse(MediaStore.Images.Media.insertImage(this.getContentResolver(), bitmap, null, null));
                     }
-
-                    imgString = bitmapToBase64(bitmap);
-                    Log.i(TAG, "onActivityResult: 本地路径" + outputImage);
-                    uploadImg();
+                    String imgString = bitmapToBase64(bitmap);
+                    Log.i(TAG, "onActivityResult: image 本地路径" + imgString);
+                    uploadImg(imgString);
                 }
                 break;
             // 选择图片库的图片
@@ -317,17 +335,141 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
                 if (resultCode == RESULT_OK) {
                     Uri uri = data.getData();
                     Bitmap bitmap2 = PhotoUtils.getBitmapFromUri(uri, this);
-                    imgString = bitmapToBase64(bitmap2);
-                    uploadImg();
+                    String imgString = bitmapToBase64(bitmap2);
+                    uploadImg(imgString);
                 }
                 break;
+
+            case FACE:
+                if (resultCode == RESULT_OK) {
+                    Bundle bundle = data.getExtras();
+                    Bitmap bitmap = (Bitmap) bundle.get("data");
+
+                    recogIv.setImageBitmap(bitmap);
+
+//                    if (data.getData() != null) {
+//                        imageUri = data.getData();
+//                    } else {
+//                        imageUri = Uri.parse(MediaStore.Images.Media.insertImage(this.getContentResolver(), bitmap, null, null));
+//                    }
+                    String imgString = bitmapToBase64(bitmap);
+                    Log.i(TAG, "onActivityResult: face 本地路径" + imgString);
+
+                    byte[] bitmapByte = getBitmapByte(bitmap);
+
+
+                    String encode = Base64Util.encode(bitmapByte);
+                    Log.i(TAG, "onActivityResult: face encode" + encode);
+                    faceImage(imgString);
+                }
+                break;
+
+            default:
+                break;
+
         }
 
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        switch (requestCode) {
+            case 1:
+                for (int i = 0; i < grantResults.length; i++) {
+                    if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                        //判断是否勾选禁止后不再询问
+                        //如果应用之前请求过此权限但用户拒绝了请求，此方法将返回 true。
+                        boolean showRequestPermission = ActivityCompat.shouldShowRequestPermissionRationale(ActivityUiRecog.this, permissions[i]);
+                        if (showRequestPermission) {
+                            //这里可以做相关操作，我这里是写的是重新申请权限
+                            checkPermission();//重新申请权限
+                            return;
+                        } else {
+                            //做相关操作。。。
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    //颜值打分
+    public void faceImage(String imgString) {
+        OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
+
+        filePath = imgString;
+        byte[] imgData = new byte[0];
+        try {
+            imgData = FileUtil.readFileByBytes(filePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String imgStr = Base64Util.encode(imgData);
+        try {
+            imgParam = URLEncoder.encode(imgStr, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
+        // 注意这里仅为了简化编码每一次请求都去获取access_token，线上环境access_token有过期时间， 客户端可自行缓存，过期后重新获取。
+        String accessToken = "24.621c25b8187380829ddf0e7f4701dec6.2592000.1576169171.282335-17721709";
+
+        FormBody body = new FormBody.Builder().add("access_token", accessToken).add("image", imgString).add("face_field", "age,beauty,expression").add("image_type", "BASE64").build();
+
+        Request request = new Request.Builder().url(faceUrl).post(body).build();
+//
+        okHttpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                final String data = response.body().string();
+                Log.i(TAG, "onResponse: face result data==" + data);
+                Gson gson = new Gson();
+                FaceBeanClass faceBean = gson.fromJson(data, FaceBeanClass.class);
+                FaceBeanClass.ResultBean result = faceBean.getResult();
+                List<FaceBeanClass.ResultBean.FaceListBean> resultFace_list = result.getFace_list();
+                for (int i = 0; i < resultFace_list.size(); i++) {
+                    FaceBeanClass.ResultBean.FaceListBean faceListBean = resultFace_list.get(i);
+                    int age = faceListBean.getAge();
+                    double beauty = faceListBean.getBeauty();
+
+                    Log.i(TAG, "onResponse: age ==" + age);
+                    Log.i(TAG, "onResponse: beauty ==" + beauty);
+
+                    if (beauty >= 90.0) {
+                        resultTv.setText("该照片颜值是 :" + String.valueOf(beauty) + "\r\n" + " 简直就是沉鱼落雁，前无古人后无来者的颜值 \r\n（(❤ ω ❤)" + "\r\n" + "该照片的人年龄是 :" + age);
+                    } else if (beauty >= 70.0) {
+                        resultTv.setText("该照片颜值是 :" + String.valueOf(beauty) + "\r\n" + " 古代妃子皇子就是你把\r\nψ(._. )>" + "\r\n" + "该照片的人年龄是 :" + age);
+                    } else if (beauty >= 60.0) {
+                        resultTv.setText("该照片颜值是 :" + String.valueOf(beauty) + "\r\n" + " 真令人惊讶呢，还需要好好打扮自己哦\r\n(。・∀・)ノ" + "\r\n" + "该照片的人年龄是 :" + age);
+                    } else if (beauty >= 50.0) {
+                        resultTv.setText("该照片颜值是 :" + String.valueOf(beauty) + "\r\n" + " 你看，那猪在天上飞!\r\n( ఠൠఠ )ﾉ" + "\r\n" + "该照片的人年龄是 :" + age);
+                    } else {
+                        resultTv.setText("该照片颜值是 :" + String.valueOf(beauty) + "\r\n" + " 哇，长得丑不是你的错，出来吓人就是你不对了\r\n(　o=^•ェ•)o　┏━┓" + "\r\n" + "该照片的人年龄是 :" + age);
+                    }
+
+//                        Log.i(TAG, "onResponse: expressionType ==" + expressionType);
+
+
+                }
+
+
+            }
+
+        });
+
+    }
 
     //上传图片文件的操作
-    public void uploadImg() {
+    public void uploadImg(String imgString) {
         OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
         //上传图片参数需要与服务端沟通，我就不多做解释了，我添加的都是我们服务端需要的
         //你们根据情况自行更改
@@ -345,24 +487,13 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
-        String param = "image=" + imgString;
 
         // 注意这里仅为了简化编码每一次请求都去获取access_token，线上环境access_token有过期时间， 客户端可自行缓存，过期后重新获取。
-        String accessToken = "24.bf5c874e04876d3de725173a31c93359.2592000.1576019669.282335-17721709";
+        String accessToken = "24.621c25b8187380829ddf0e7f4701dec6.2592000.1576169171.282335-17721709";
 
-//        try {
-//            String result = HttpUtil.post(url, accessToken, param);
-//            Log.i(TAG, "uploadImg: result" + result);
-//            txtLog.setText(result);
-//
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
         FormBody body = new FormBody.Builder().add("access_token", accessToken).add("image", imgString).add("baike_num", "5").build();
 
-        Request request = new Request.Builder().url(url).post(body).build();
+        Request request = new Request.Builder().url(imageclassifyUrl).post(body).build();
 
         okHttpClient.newCall(request).enqueue(new Callback() {
             @Override
@@ -380,7 +511,7 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
                 try {
                     JSONObject jsonObject = new JSONObject(data);
                     JSONArray resultl = jsonObject.getJSONArray("result");
-                    JSONObject resultlJSONObject= resultl.getJSONObject(0);
+                    JSONObject resultlJSONObject = resultl.getJSONObject(0);
                     String keyword = resultlJSONObject.getString("keyword");
 
 
@@ -388,11 +519,11 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
 
 
                     Log.i(TAG, "onResponse: keyword ==" + keyword);
-                    if (baike_info.equals("{}")){
-                        resultTv.setText("这个可能是 :" + keyword  + "\r" );
-                    }else {
+                    if (baike_info.equals("{}")) {
+                        resultTv.setText("这个可能是 :" + keyword + "\r\n");
+                    } else {
                         String description = baike_info.getString("description");
-                        resultTv.setText("这个可能是 :" + keyword  + "\n" +"该商品的百科是：" + description);
+                        resultTv.setText("这个可能是 :" + keyword + "\n" + "该商品的百科是：" + description);
                     }
 
 
@@ -435,7 +566,87 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
         return result;
     }
 
+    //检查权限
+    private void checkPermission() {
+        mPermissionList.clear();
+        /**
+         *PackageManager.PERMISSION_GRANTED 表示有权限， PackageManager.PERMISSION_DENIED 表示无权限。
+         * 判断哪些权限未授予
+         * 以便必要的时候重新申请
+         */
+        for (String permission : permissions) {
+            //判断所要申请的权限是否已经授权
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                mPermissionList.add(permission);
+            }
+        }
+        /**
+         * 判断存储委授予权限的集合是否为空
+         */
+        if (!mPermissionList.isEmpty()) {
+            String[] permissions = mPermissionList.toArray(new String[mPermissionList.size()]);//将List转为数组
+            ActivityCompat.requestPermissions(ActivityUiRecog.this, permissions, 1);//请求指定授权
+        } else {//未授予的权限为空，表示都授予了
+        }
+    }
+
+
+    /**
+     * 读取文件里面的字符串
+     *
+     * @param fileName
+     * @return
+     */
+    private String readFile(String fileName) {
+        String result = null;
+        try {
+            InputStream inputStream = openFileInput(fileName);
+
+            byte[] bytes = new byte[inputStream.available()];
+            inputStream.read(bytes);
+            result = new String(bytes);
+
+            inputStream.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+
+    public static String toURLEncoded(String paramString) {
+        if (paramString == null || paramString.equals("")) {
+            Log.d(TAG, "toURLEncoded: " + paramString);
+            return "";
+        }
+
+        try {
+            String str = new String(paramString.getBytes(), "UTF-8");
+            str = URLEncoder.encode(str, "UTF-8");
+            return str;
+        } catch (Exception localException) {
+            Log.e(TAG, "toURLEncoded: " + paramString, localException);
+        }
+
+        return "";
+    }
+
+
+    public byte[] getBitmapByte(Bitmap bitmap) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+        try {
+            out.flush();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return out.toByteArray();
+    }
 
 }
+
+
 
 
