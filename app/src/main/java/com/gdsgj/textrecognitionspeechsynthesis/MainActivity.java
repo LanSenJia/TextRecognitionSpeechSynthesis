@@ -840,7 +840,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onResult(String result) {
                             infoPopText("车牌识别结果", getLicensePlateJsonBean(result));
-                            speak("银行卡识别结果是：" + getLicensePlateJsonBean(result));
+                            speak("车牌识别结果是：" + getLicensePlateJsonBean(result));
                         }
                     });
         }
