@@ -1064,4 +1064,6 @@ public class ActivityAllRecog extends AppCompatActivity implements EventListener
         return baos.toByteArray();
     }
 
+
+
 }
