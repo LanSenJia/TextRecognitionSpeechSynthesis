@@ -244,24 +244,24 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
                 if (msg.arg2 == 1) {
 //                    txtResult.setText(msg.obj.toString());
                     if (msg.obj.toString().length() != 0) {
-                        txtLog.setVisibility(View.GONE);
-                        String subStr = msg.obj.toString().substring(9);
-                        subStr = subStr.substring(0, msg.obj.toString().indexOf("；"));
-                        subStr = subStr.substring(0, subStr.length() - 10);
-                        txtResult.setText("语音识别结果： "+subStr);
-                        Log.i(TAG, "handleMsg: msg识别结果" + subStr);
-                        String whatis = "这是什么";
-                        String faceis = "颜值打分";
-                        String faceis2 = "人脸打分";
-                        String whatis_keyword = "这个是什么";
-                        if (whatis.contains(subStr) || whatis_keyword.contains(subStr)) {
-                            Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-                            startActivityForResult(intent, PICK);
-
-                        } else if (faceis.equals(subStr)|| faceis2.contains(subStr)) {
-                            Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-                            startActivityForResult(intent, FACE);
-                        }
+//                        txtLog.setVisibility(View.GONE);
+//                        String subStr = msg.obj.toString().substring(9);
+//                        subStr = subStr.substring(0, msg.obj.toString().indexOf("；"));
+//                        subStr = subStr.substring(0, subStr.length() - 10);
+//                        txtResult.setText("语音识别结果： "+subStr);
+//                        Log.i(TAG, "handleMsg: msg识别结果" + subStr);
+//                        String whatis = "这是什么";
+//                        String faceis = "颜值打分";
+//                        String faceis2 = "人脸打分";
+//                        String whatis_keyword = "这个是什么";
+//                        if (whatis.contains(subStr) || whatis_keyword.contains(subStr)) {
+//                            Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+//                            startActivityForResult(intent, PICK);
+//
+//                        } else if (faceis.equals(subStr)|| faceis2.contains(subStr)) {
+//                            Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+//                            startActivityForResult(intent, FACE);
+//                        }
                     }
                 }
                 status = msg.what;
@@ -282,7 +282,7 @@ public abstract class ActivityUiRecog extends ActivityCommon implements IStatus 
         }
     }
 
-    private void updateBtnTextByStatus() {
+    public void updateBtnTextByStatus() {
         switch (status) {
             case STATUS_NONE:
                 btn.setText("开始录音");

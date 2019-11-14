@@ -25,6 +25,8 @@ public abstract class ActivityAbstractRecog extends ActivityUiRecog {
      */
     protected MyRecognizer myRecognizer;
 
+
+
     /*
      * 本Activity中是否需要调用离线命令词功能。根据此参数，判断是否需要调用SDK的ASR_KWS_LOAD_ENGINE事件
      */
