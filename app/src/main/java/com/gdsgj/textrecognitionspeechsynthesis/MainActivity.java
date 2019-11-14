@@ -1478,7 +1478,7 @@ public class MainActivity extends AppCompatActivity {
         startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, ActivityOfflineRecog.class);
+                Intent intent = new Intent(MainActivity.this, ActivityAllRecog.class);
                 startActivity(intent);
             }
         });
