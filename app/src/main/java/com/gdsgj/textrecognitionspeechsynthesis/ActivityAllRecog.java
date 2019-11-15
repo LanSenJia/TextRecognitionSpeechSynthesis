@@ -3,6 +3,9 @@ package com.gdsgj.textrecognitionspeechsynthesis;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -22,8 +25,12 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -137,6 +144,8 @@ public class ActivityAllRecog extends AppCompatActivity implements EventListener
     private AlertDialog.Builder alertDialog;
     private SpeechSynthesizer mSpeechSynthesizer;
     private Application application;
+    private boolean isDialogClick = false;
+    private boolean isPlayAudio = true;
 
 
     // ================== 初始化参数设置开始 ==========================
@@ -438,7 +447,7 @@ public class ActivityAllRecog extends AppCompatActivity implements EventListener
                         public void onResult(String result) {
                             Log.i(TAG, "onResult:  == " + getUniverstalTextJsonBean(result));
                             infoPopText("识别结果,查看以下内容", getUniverstalTextJsonBean(result));
-                            speak("文字识别结果是：" + getUniverstalTextJsonBean(result));
+                            speak(getUniverstalTextJsonBean(result));
                         }
                     });
         }
@@ -452,7 +461,7 @@ public class ActivityAllRecog extends AppCompatActivity implements EventListener
                         public void onResult(String result) {
                             infoPopText("识别结果,查看以下内容", result);
                             Log.i(TAG, "onResult: 银行卡result" + result);
-                            speak("银行卡识别结果是：" + result + "   ");
+                            speak(result + "   ");
                         }
                     });
         }
@@ -463,8 +472,8 @@ public class ActivityAllRecog extends AppCompatActivity implements EventListener
                     new RecognizeService.ServiceListener() {
                         @Override
                         public void onResult(String result) {
-                            infoPopText("车牌识别结果", getLicensePlateJsonBean(result));
-                            speak("车牌识别结果是：" + getLicensePlateJsonBean(result));
+                            infoPopText("识别结果,查看以下内容", getLicensePlateJsonBean(result));
+                            speak(getLicensePlateJsonBean(result));
                         }
                     });
         }
@@ -520,9 +529,11 @@ public class ActivityAllRecog extends AppCompatActivity implements EventListener
                         String[] mitems4 = {"该车型是：" + name4, "可能性：" + score4};
                         Log.i(TAG, "handleMessage: mitems4 car ==" + "名称：" + name4 + "可能性：" + score4);
                         scan_value_tv.setVisibility(View.GONE);
-                        AlertDialog.Builder alertDialog4 = new AlertDialog.Builder(ActivityAllRecog.this);
-                        alertDialog4.setTitle("识别报告").setItems(mitems4, null).create().show();
+//                        AlertDialog.Builder alertDialog4 = new AlertDialog.Builder(ActivityAllRecog.this);
+//                        alertDialog4.setTitle("识别报告").setItems(mitems4, null).create().show();
 
+
+                        infoPopText("识别结果,查看以下内容", "该车型是：" + name4 + "可能性：" + score4);
                         speak("识别报告：该车型是 " + name4);
 
                     } catch (JSONException e) {
@@ -824,17 +835,114 @@ public class ActivityAllRecog extends AppCompatActivity implements EventListener
         this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                alertDialog.setTitle(title)
-                        .setMessage(message)
-                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                mSpeechSynthesizer.stop();
-                            }
-                        })
-                        .show();
+//                alertDialog.setTitle(title)
+//                        .setMessage(message)
+//                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+//                            @Override
+//                            public void onClick(DialogInterface dialog, int which) {
+//                                mSpeechSynthesizer.stop();
+//                            }
+//                        })
+//                        .show();
+                customAlertDialog(title, message);
             }
         });
+    }
+
+
+    private void customAlertDialog(final String title, final String message) {
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+
+                LayoutInflater inflater = LayoutInflater.from(ActivityAllRecog.this);
+                final View dialogView = inflater
+                        .inflate(R.layout.activityallrecog_dialog_layout, null);
+                final EditText dialogResultEt = dialogView.findViewById(R.id.dialog_result_et);
+                dialogResultEt.setText(message);
+                dialogResultEt.setFocusable(false);
+                dialogResultEt.setFocusableInTouchMode(false);
+                TextView dialogTitle = dialogView.findViewById(R.id.dialog_title);
+                dialogTitle.setText(title);
+                Button exitBtn = dialogView.findViewById(R.id.dialog_exit_btn);
+                final Button playBtn = dialogView.findViewById(R.id.dialog_play_audio_btn);
+                Button copyBtn = dialogView.findViewById(R.id.dialog_copy_btn);
+                final Button editBtn = dialogView.findViewById(R.id.dialog_edit_btn);
+                final AlertDialog.Builder builder = new AlertDialog.Builder(ActivityAllRecog.this);
+                builder.setView(dialogView);
+                final AlertDialog alertDialog = builder.create();
+                alertDialog.show();
+
+
+                dialogResultEt.setText(message);
+                dialogTitle.setText(title);
+
+                exitBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        alertDialog.dismiss();
+                    }
+                });
+
+                playBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        speak(message);
+
+                        if (isPlayAudio) {
+                            isPlayAudio = false;
+                            playBtn.setText("播放");
+                            mSpeechSynthesizer.stop();
+                        } else {
+                            isPlayAudio = true;
+                            playBtn.setText("停止");
+                            mSpeechSynthesizer.speak(message);
+                        }
+                    }
+                });
+
+                copyBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        ClipboardManager myClipboard = (ClipboardManager) (ActivityAllRecog.this).getSystemService(CLIPBOARD_SERVICE);
+
+                        ClipData clipData = ClipData.newPlainText("message", dialogResultEt.getText());
+                        myClipboard.setPrimaryClip(clipData);
+                        Log.i(TAG, "onClick: 已复制");
+                        Toast.makeText(ActivityAllRecog.this, "复制成功!", Toast.LENGTH_LONG).show();
+                    }
+                });
+
+                editBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (isDialogClick) {
+                            dialogResultEt.setFocusable(false);
+                            dialogResultEt.setFocusableInTouchMode(false);
+
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
+                            // 如果之前没设置过点击事件，该处可省略
+                            dialogResultEt.setOnClickListener(null);
+                            editBtn.setText("编辑");
+                            Toast.makeText(ActivityAllRecog.this, "保存成功!", Toast.LENGTH_LONG).show();
+                            isDialogClick = !isDialogClick;
+                        } else {
+                            dialogResultEt.setFocusable(true);
+                            dialogResultEt.setSelection(message.length());
+                            dialogResultEt.setFocusableInTouchMode(true);
+                            dialogResultEt.requestFocus();
+                            ActivityAllRecog.this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+
+                            editBtn.setText("保存");
+                            isDialogClick = !isDialogClick;
+
+                        }
+                    }
+                });
+            }
+        });
+
     }
 
     //设置合成语音的listener
@@ -1063,7 +1171,6 @@ public class ActivityAllRecog extends AppCompatActivity implements EventListener
         bm.compress(Bitmap.CompressFormat.PNG, 100, baos);
         return baos.toByteArray();
     }
-
 
 
 }

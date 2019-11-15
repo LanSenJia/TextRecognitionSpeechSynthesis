@@ -732,12 +732,12 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(View v) {
                         speak(message);
 
-                        if (isPlayAudio){
-                            isPlayAudio =false;
+                        if (isPlayAudio) {
+                            isPlayAudio = false;
                             playBtn.setText("播放");
                             mSpeechSynthesizer.stop();
-                        }else {
-                            isPlayAudio =true;
+                        } else {
+                            isPlayAudio = true;
                             playBtn.setText("停止");
                             mSpeechSynthesizer.speak(message);
                         }
@@ -748,7 +748,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         ClipboardManager myClipboard = (ClipboardManager) (MainActivity.this).getSystemService(CLIPBOARD_SERVICE);
-                        ClipData clipData = ClipData.newPlainText("message", message);
+                        ClipData clipData = ClipData.newPlainText("message",   dialogResultEt.getText());
                         myClipboard.setPrimaryClip(clipData);
                         Log.i(TAG, "onClick: 已复制");
                         Toast.makeText(MainActivity.this, "复制成功!", Toast.LENGTH_LONG).show();
@@ -913,8 +913,8 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onResult(String result) {
                             Log.i(TAG, "onResult: 银行卡result" + result);
-                            customAlertDialog("识别结果,查看以下内容",result);
-                            speak( result + "   ");
+                            customAlertDialog("识别结果,查看以下内容", result);
+                            speak(result + "   ");
                         }
                     });
         }
@@ -1125,7 +1125,7 @@ public class MainActivity extends AppCompatActivity {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        AipImageClassify classify = new AipImageClassify(appId, Const.appKey, secretKey);
+                        AipImageClassify classify = new AipImageClassify(Const.appId, Const.appKey, Const.secretKey);
                         classify.setConnectionTimeoutInMillis(2000);
                         classify.setSocketTimeoutInMillis(6000);
                         JSONObject vaule = classify.carDetect(bitmap2Bytes, new HashMap<String, String>());

@@ -6,6 +6,9 @@ package com.gdsgj.textrecognitionspeechsynthesis;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -18,8 +21,14 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.baidu.ocr.sdk.OCR;
 import com.baidu.ocr.sdk.OnResultListener;
@@ -49,6 +58,7 @@ import java.util.Date;
 import java.util.List;
 
 import static com.gdsgj.textrecognitionspeechsynthesis.Const.appId;
+
 /*
  * @author  LanSenJia
  * @date 2019/6/24.
@@ -75,6 +85,8 @@ public class IDCardActivity extends AppCompatActivity {
     protected TtsMode ttsMode = TtsMode.ONLINE;
 
     private Application application;
+    private boolean isDialogClick = false;
+    private boolean isPlayAudio = true;
 
     private boolean checkGalleryPermission() {
         int ret = ActivityCompat.checkSelfPermission(IDCardActivity.this, Manifest.permission
@@ -225,9 +237,10 @@ public class IDCardActivity extends AppCompatActivity {
 //                    getIDCardJsonBean(result.toString());
                     Log.i("idcard", "onResult: idcard result==" + result.toString());
                     String idCardJsonBean = getIDCardJsonBean(result);
-//                    alertText("身份证识别结果", idCardJsonBean);
+                    alertText("身份证识别结果", idCardJsonBean);
+
                     speak(idCardJsonBean);
-                    infoTextView.setText(idCardJsonBean);
+//                    infoTextView.setText(idCardJsonBean);
 
                 }
             }
@@ -273,12 +286,114 @@ public class IDCardActivity extends AppCompatActivity {
         this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                alertDialog.setTitle(title)
-                        .setMessage(message)
-                        .setPositiveButton("确定", null)
-                        .show();
+//                alertDialog.setTitle(title)
+//                        .setMessage(message)
+//                        .setPositiveButton("确定", null)
+//                        .show();
+                customAlertDialog(title, message);
             }
         });
+
+
+    }
+
+    private void customAlertDialog(final String title, final String message) {
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+
+                LayoutInflater inflater = LayoutInflater.from(IDCardActivity.this);
+                final View dialogView = inflater
+                        .inflate(R.layout.activityallrecog_dialog_layout, null);
+                final EditText dialogResultEt = dialogView.findViewById(R.id.dialog_result_et);
+                dialogResultEt.setText(message);
+                dialogResultEt.setFocusable(false);
+                dialogResultEt.setFocusableInTouchMode(false);
+                TextView dialogTitle = dialogView.findViewById(R.id.dialog_title);
+                dialogTitle.setText(title);
+                Button exitBtn = dialogView.findViewById(R.id.dialog_exit_btn);
+                final Button playBtn = dialogView.findViewById(R.id.dialog_play_audio_btn);
+                Button copyBtn = dialogView.findViewById(R.id.dialog_copy_btn);
+                final Button editBtn = dialogView.findViewById(R.id.dialog_edit_btn);
+                final AlertDialog.Builder builder = new AlertDialog.Builder(IDCardActivity.this);
+                builder.setView(dialogView);
+                final AlertDialog alertDialog = builder.create();
+                alertDialog.show();
+
+
+                dialogResultEt.setText(message);
+                dialogTitle.setText(title);
+
+                exitBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (mSpeechSynthesizer != null) {
+                            mSpeechSynthesizer.stop();
+                        }
+                        alertDialog.dismiss();
+
+                    }
+                });
+
+                playBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        speak(message);
+
+                        if (isPlayAudio) {
+                            isPlayAudio = false;
+                            playBtn.setText("播放");
+                            mSpeechSynthesizer.stop();
+                        } else {
+                            isPlayAudio = true;
+                            playBtn.setText("停止");
+                            mSpeechSynthesizer.speak(message);
+                        }
+                    }
+                });
+
+                copyBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        ClipboardManager myClipboard = (ClipboardManager) (IDCardActivity.this).getSystemService(CLIPBOARD_SERVICE);
+
+                        ClipData clipData = ClipData.newPlainText("message", dialogResultEt.getText());
+                        myClipboard.setPrimaryClip(clipData);
+                        Log.i(TAG, "onClick: 已复制");
+                        Toast.makeText(IDCardActivity.this, "复制成功!", Toast.LENGTH_LONG).show();
+                    }
+                });
+
+                editBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (isDialogClick) {
+                            dialogResultEt.setFocusable(false);
+                            dialogResultEt.setFocusableInTouchMode(false);
+
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
+                            // 如果之前没设置过点击事件，该处可省略
+                            dialogResultEt.setOnClickListener(null);
+                            editBtn.setText("编辑");
+                            Toast.makeText(IDCardActivity.this, "保存成功!", Toast.LENGTH_LONG).show();
+                            isDialogClick = !isDialogClick;
+                        } else {
+                            dialogResultEt.setFocusable(true);
+                            dialogResultEt.setSelection(message.length());
+                            dialogResultEt.setFocusableInTouchMode(true);
+                            dialogResultEt.requestFocus();
+                            IDCardActivity.this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+
+                            editBtn.setText("保存");
+                            isDialogClick = !isDialogClick;
+
+                        }
+                    }
+                });
+            }
+        });
+
     }
 
     private String getRealPathFromURI(Uri contentURI) {
